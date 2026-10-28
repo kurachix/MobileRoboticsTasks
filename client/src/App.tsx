@@ -7,6 +7,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CreateTaskView } from './components/CreateTaskView';
 import { TaskModal } from './components/TaskModal';
 import { ProfileModal } from './components/ProfileModal';
+import { PwaInstallPrompt } from './components/PwaInstallPrompt';
 
 export const App: React.FC = () => {
   // Estado de Autenticação
@@ -139,11 +140,14 @@ export const App: React.FC = () => {
   // 2. Primeira Tela: Login
   if (!user) {
     return (
-      <LoginView
-        onCredentialsLogin={handleCredentialsLogin}
-        isLoading={isAuthLoading}
-        error={authError}
-      />
+      <>
+        <LoginView
+          onCredentialsLogin={handleCredentialsLogin}
+          isLoading={isAuthLoading}
+          error={authError}
+        />
+        <PwaInstallPrompt />
+      </>
     );
   }
 
@@ -208,6 +212,9 @@ export const App: React.FC = () => {
             }}
           />
         )}
+
+        {/* Prompt de Instalação do PWA em dispositivos Mobile */}
+        <PwaInstallPrompt />
       </div>
-      );
+  );
 };
