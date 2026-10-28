@@ -1,0 +1,16 @@
+{
+  "name": "minimalist-tasks",
+  "version": "1.0.0",
+  "description": "Sistema de To-Do minimalista (Preto & Roxo) com Google SSO e Kanban",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "start": "node server/dist/index.js",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+

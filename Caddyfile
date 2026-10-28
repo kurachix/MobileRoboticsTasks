@@ -1,0 +1,18 @@
+# Caddyfile para Proxy Reverso e SSL Automático via Let's Encrypt
+{$DOMAIN} {
+    # Redireciona todas as requisições para a aplicação Node.js
+    reverse_proxy app:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Compressão automática de assets (gzip / zstd)
+    encode zstd gzip
+
+    # Logs de acesso
+    log {
+        output file /data/caddy_access.log
+    }
+}
+

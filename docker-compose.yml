@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tasks_app
+    restart: unless-stopped
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - DATABASE_PATH=/data/app.db
+    volumes:
+      - tasks_data:/data
+    networks:
+      - tasks_net
+
+  caddy:
+    image: caddy:alpine
+    container_name: tasks_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - tasks_net
+
+volumes:
+  tasks_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  tasks_net:
+    driver: bridge
+
