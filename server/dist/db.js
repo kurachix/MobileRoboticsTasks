@@ -98,9 +98,9 @@ function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
     `);
-        // Limpar tarefas genéricas de exemplo caso existam
+        // Limpar tarefas genéricas de exemplo e usuários extras antigos
         sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
-        sqliteDb.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
+        sqliteDb.prepare(`DELETE FROM users WHERE id NOT IN ('user_carlos', 'user_nicolle', 'user_kurachi', 'user_admin')`).run();
         // Garantir que os usuários da equipe SPSkills / WorldSkills existam para designação
         const seedUsers = [
             {
@@ -205,10 +205,21 @@ function updateUserAvatar(id, avatarUrl) {
     return memoryStore.users[idx];
 }
 function listUsers() {
+    const allowedIds = ['user_carlos', 'user_nicolle', 'user_kurachi'];
     if (!useJsonFallback && sqliteDb) {
-        return sqliteDb.prepare('SELECT id, email, name, avatar_url FROM users ORDER BY name ASC').all();
+        return sqliteDb.prepare(`
+      SELECT id, email, name, avatar_url
+      FROM users
+      WHERE id IN ('user_carlos', 'user_nicolle', 'user_kurachi')
+      ORDER BY CASE id
+        WHEN 'user_carlos' THEN 1
+        WHEN 'user_nicolle' THEN 2
+        WHEN 'user_kurachi' THEN 3
+        ELSE 4
+      END
+    `).all();
     }
-    return memoryStore.users;
+    return memoryStore.users.filter(u => allowedIds.includes(u.id));
 }
 // Queries de Tarefas
 function listTasks() {
