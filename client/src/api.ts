@@ -21,22 +21,11 @@ export async function request<T>(endpoint: string, options: RequestInit = {}): P
 
 export const api = {
   // Auth
-  getConfig: () => request<{ googleClientId: string | null; isProduction: boolean }>('/auth/config'),
   getMe: () => request<{ user: User }>('/auth/me'),
   loginCredentials: (identifier: string, password: string) =>
     request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ identifier, password }),
-    }),
-  loginGoogle: (credential: string) =>
-    request<{ user: User; token: string }>('/auth/google', {
-      method: 'POST',
-      body: JSON.stringify({ credential }),
-    }),
-  loginDemo: (name?: string, email?: string) =>
-    request<{ user: User; token: string }>('/auth/demo', {
-      method: 'POST',
-      body: JSON.stringify({ name, email }),
     }),
   logout: () => request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
 
@@ -89,4 +78,3 @@ export const api = {
       method: 'DELETE',
     }),
 };
-

@@ -11,7 +11,6 @@ import { ProfileModal } from './components/ProfileModal';
 export const App: React.FC = () => {
   // Estado de Autenticação
   const [user, setUser] = useState<User | null>(null);
-  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -28,13 +27,10 @@ export const App: React.FC = () => {
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Carregar configurações de autenticação e verificar sessão existente
+  // Verificar sessão existente
   useEffect(() => {
     async function initAuth() {
       try {
-        const configData = await api.getConfig();
-        setGoogleClientId(configData.googleClientId);
-
         const meData = await api.getMe();
         if (meData?.user) {
           setUser(meData.user);
@@ -81,32 +77,6 @@ export const App: React.FC = () => {
       setUser(res.user);
     } catch (err: any) {
       setAuthError(err.message || 'Credenciais inválidas.');
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleGoogleSuccess = async (credential: string) => {
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      const res = await api.loginGoogle(credential);
-      setUser(res.user);
-    } catch (err: any) {
-      setAuthError(err.message || 'Falha ao autenticar com o Google.');
-    } finally {
-      setIsAuthLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setIsAuthLoading(true);
-    setAuthError(null);
-    try {
-      const res = await api.loginDemo('SENAI', 'senai@spskills.com');
-      setUser(res.user);
-    } catch (err: any) {
-      setAuthError(err.message || 'Falha no login.');
     } finally {
       setIsAuthLoading(false);
     }
@@ -160,8 +130,8 @@ export const App: React.FC = () => {
   // 1. Tela de Carregamento Inicial
   if (isAuthLoading && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050508]">
-        <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+      <div className="min-h-dvh flex items-center justify-center bg-[#060609]">
+        <div className="w-8 h-8 rounded-full border-2 border-purple-600 border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -170,10 +140,7 @@ export const App: React.FC = () => {
   if (!user) {
     return (
       <LoginView
-        googleClientId={googleClientId}
         onCredentialsLogin={handleCredentialsLogin}
-        onGoogleSuccess={handleGoogleSuccess}
-        onDemoLogin={handleDemoLogin}
         isLoading={isAuthLoading}
         error={authError}
       />
@@ -182,42 +149,42 @@ export const App: React.FC = () => {
 
   // 3. Sistema Logado: Header com 2 Guias + Conteúdo da Guia Ativa
   return (
-      <div className="relative min-h-screen bg-[#060609] text-zinc-100 flex flex-col overflow-x-hidden">
-        {/* Ambient Background Lighting */}
-        <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
-        <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-900/15 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
-        <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-950/15 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
+    <div className="relative min-h-dvh bg-[#060609] text-zinc-100 flex flex-col overflow-x-hidden">
+      {/* Ambient Background Lighting */}
+      <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
+      <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-900/15 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
+      <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-950/15 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
 
-        <Header
-          user={user}
-          activeTab={activeTab}
-          taskCount={tasks.length}
-          onChangeTab={setActiveTab}
-          onOpenProfile={() => setIsProfileOpen(true)}
-          onLogout={handleLogout}
-        />
+      <Header
+        user={user}
+        activeTab={activeTab}
+        taskCount={tasks.length}
+        onChangeTab={setActiveTab}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onLogout={handleLogout}
+      />
 
-        <main className="relative z-10 flex-1 overflow-x-auto">
-          {isTasksLoading && tasks.length === 0 ? (
-            <div className="py-20 flex justify-center items-center">
-              <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : activeTab === 'board' ? (
-            <KanbanBoard
-              tasks={tasks}
-              onTaskClick={handleOpenEditTask}
-              onMoveTask={handleMoveTask}
-            />
-          ) : (
-            <CreateTaskView
-              users={users}
-              onTaskCreated={newTask => {
-                handleTaskSaved(newTask);
-                setActiveTab('board');
-              }}
-            />
-          )}
-        </main>
+      <main className="relative z-10 flex-1 overflow-x-hidden">
+        {isTasksLoading && tasks.length === 0 ? (
+          <div className="py-20 flex justify-center items-center">
+            <div className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : activeTab === 'board' ? (
+          <KanbanBoard
+            tasks={tasks}
+            onTaskClick={handleOpenEditTask}
+            onMoveTask={handleMoveTask}
+          />
+        ) : (
+          <CreateTaskView
+            users={users}
+            onTaskCreated={newTask => {
+              handleTaskSaved(newTask);
+              setActiveTab('board');
+            }}
+          />
+        )}
+      </main>
 
         {/* Modal de Detalhes / Edição da Tarefa */}
         {isModalOpen && (
