@@ -22,7 +22,13 @@ app.use((0, cors_1.default)({
     credentials: true,
 }));
 app.use((0, cookie_parser_1.default)());
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '8mb' }));
+// Servir pasta de uploads de fotos de perfil (/uploads)
+const uploadsDir = path_1.default.resolve(path_1.default.dirname(config_js_1.config.databasePath), 'uploads');
+if (!fs_1.default.existsSync(uploadsDir)) {
+    fs_1.default.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express_1.default.static(uploadsDir));
 // Rotas de API
 app.use('/api/auth', authRoutes_js_1.authRouter);
 app.use('/api/tasks', taskRoutes_js_1.taskRouter);

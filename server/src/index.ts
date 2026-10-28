@@ -20,7 +20,14 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
+
+// Servir pasta de uploads de fotos de perfil (/uploads)
+const uploadsDir = path.resolve(path.dirname(config.databasePath), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Rotas de API
 app.use('/api/auth', authRouter);

@@ -42,6 +42,11 @@ export const api = {
 
   // Usuários
   getUsers: () => request<{ users: User[] }>('/users'),
+  updateProfile: (data: { password: string; avatarDataUrl?: string | null; presetAvatarUrl?: string | null }) =>
+    request<{ user: User }>('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 
   // Tarefas
   getTasks: () => request<{ tasks: Task[] }>('/tasks'),

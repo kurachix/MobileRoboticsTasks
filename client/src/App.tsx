@@ -5,6 +5,7 @@ import { Header } from './components/Header';
 import { LoginView } from './components/LoginView';
 import { KanbanBoard } from './components/KanbanBoard';
 import { TaskModal } from './components/TaskModal';
+import { ProfileModal } from './components/ProfileModal';
 
 export const App: React.FC = () => {
   // Estado de Autenticação
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
 
   // Estado do Modal
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [initialColumnStatus, setInitialColumnStatus] = useState<TaskStatus>('todo');
 
@@ -193,6 +195,7 @@ export const App: React.FC = () => {
 
       <Header
         user={user}
+        onOpenProfile={() => setIsProfileOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -221,6 +224,18 @@ export const App: React.FC = () => {
           onClose={() => setIsModalOpen(false)}
           onSave={handleTaskSaved}
           onDelete={handleTaskDeleted}
+        />
+      )}
+
+      {/* Modal de Configuração de Perfil */}
+      {isProfileOpen && (
+        <ProfileModal
+          user={user}
+          onClose={() => setIsProfileOpen(false)}
+          onUpdated={updatedUser => {
+            setUser(updatedUser);
+            loadWorkspaceData();
+          }}
         />
       )}
     </div>

@@ -7,6 +7,7 @@ exports.initDatabase = initDatabase;
 exports.findUserById = findUserById;
 exports.findUserByEmail = findUserByEmail;
 exports.upsertUser = upsertUser;
+exports.updateUserAvatar = updateUserAvatar;
 exports.listUsers = listUsers;
 exports.listTasks = listTasks;
 exports.getTaskById = getTaskById;
@@ -128,12 +129,8 @@ function initDatabase() {
             },
         ];
         const stmtUser = sqliteDb.prepare(`
-      INSERT INTO users (id, email, name, avatar_url)
+      INSERT OR IGNORE INTO users (id, email, name, avatar_url)
       VALUES (?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        email = excluded.email,
-        name = excluded.name,
-        avatar_url = excluded.avatar_url
     `);
         for (const u of seedUsers) {
             stmtUser.run(u.id, u.email, u.name, u.avatar_url);
@@ -174,13 +171,17 @@ function upsertUser(user) {
       VALUES (?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
-        avatar_url = excluded.avatar_url
+        avatar_url = COALESCE(users.avatar_url, excluded.avatar_url)
     `).run(user.id, user.email, user.name, user.avatar_url || null);
         return findUserById(user.id);
     }
     const existingIdx = memoryStore.users.findIndex(u => u.id === user.id || u.email === user.email);
     if (existingIdx >= 0) {
-        memoryStore.users[existingIdx] = { ...memoryStore.users[existingIdx], ...user };
+        memoryStore.users[existingIdx] = {
+            ...memoryStore.users[existingIdx],
+            ...user,
+            avatar_url: memoryStore.users[existingIdx].avatar_url || user.avatar_url,
+        };
         saveJsonStore();
         return memoryStore.users[existingIdx];
     }
@@ -190,6 +191,18 @@ function upsertUser(user) {
         saveJsonStore();
         return newUser;
     }
+}
+function updateUserAvatar(id, avatarUrl) {
+    if (!useJsonFallback && sqliteDb) {
+        sqliteDb.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, id);
+        return findUserById(id);
+    }
+    const idx = memoryStore.users.findIndex(u => u.id === id);
+    if (idx < 0)
+        return null;
+    memoryStore.users[idx].avatar_url = avatarUrl;
+    saveJsonStore();
+    return memoryStore.users[idx];
 }
 function listUsers() {
     if (!useJsonFallback && sqliteDb) {
