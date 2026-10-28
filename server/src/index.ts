@@ -32,9 +32,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Servir frontend compilado em produção ou se a pasta public existir
-const publicDir = path.resolve(process.cwd(), 'public');
-if (fs.existsSync(publicDir)) {
+// Servir frontend compilado
+const possiblePublicDirs = [
+  path.resolve(process.cwd(), 'client/dist'),
+  path.resolve(process.cwd(), 'public'),
+  path.resolve(__dirname, '../public'),
+  path.resolve(__dirname, '../../client/dist'),
+];
+
+const publicDir = possiblePublicDirs.find(d => fs.existsSync(path.join(d, 'index.html')));
+if (publicDir) {
+  console.log(`✦ Servindo frontend compilado a partir de: ${publicDir}`);
   app.use(express.static(publicDir));
   app.get('*', (req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));

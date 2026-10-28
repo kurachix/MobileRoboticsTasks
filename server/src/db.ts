@@ -2,6 +2,15 @@ import fs from 'fs';
 import path from 'path';
 import { config } from './config.js';
 
+interface DatabaseSyncInstance {
+  exec(sql: string): void;
+  prepare(sql: string): {
+    run(...args: any[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+    get(...args: any[]): any;
+    all(...args: any[]): any[];
+  };
+}
+
 export interface User {
   id: string;
   email: string;
@@ -49,7 +58,7 @@ export interface Comment {
   user_avatar?: string;
 }
 
-let sqliteDb: any = null;
+let sqliteDb: DatabaseSyncInstance | null = null;
 let useJsonFallback = false;
 
 // Fallback in-memory/JSON store
@@ -144,13 +153,12 @@ export function initDatabase() {
   }
 
   try {
-    // Dynamic import / require of better-sqlite3
-    const Database = require('better-sqlite3');
-    sqliteDb = new Database(config.databasePath);
-    sqliteDb.pragma('journal_mode = WAL');
-    sqliteDb.pragma('foreign_keys = ON');
+    const { DatabaseSync } = require('node:sqlite');
+    const db = new DatabaseSync(config.databasePath) as DatabaseSyncInstance;
+    sqliteDb = db;
+    db.exec('PRAGMA foreign_keys = ON;');
 
-    sqliteDb.exec(`
+    db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -201,14 +209,14 @@ export function initDatabase() {
     `);
 
     // Inserir usuário demo se banco estiver vazio
-    const count = sqliteDb.prepare('SELECT count(*) as c FROM tasks').get() as { c: number };
-    if (count.c === 0) {
-      sqliteDb.prepare(`
+    const count = db.prepare('SELECT count(*) as c FROM tasks').get() as { c: number | bigint };
+    if (Number(count.c) === 0) {
+      db.prepare(`
         INSERT OR IGNORE INTO users (id, email, name, avatar_url)
-        VALUES ('demo_user_1', 'demo@tasks.minimal', 'Equipe Tasks', 'https://api.dicebear.com/7.x/bottts/svg?seed=tasks')
-      `).run();
+        VALUES (?, ?, ?, ?)
+      `).run('demo_user_1', 'demo@tasks.minimal', 'Equipe Tasks', 'https://api.dicebear.com/7.x/bottts/svg?seed=tasks');
 
-      sqliteDb.prepare(`
+      db.prepare(`
         INSERT INTO tasks (id, title, description, status, due_date, assigned_to, created_by)
         VALUES 
           ('1', 'Configurar servidor VPS e Caddy com SSL', 'Garantir que a porta 80 e 443 estão liberadas no firewall e apontar o domínio DNS.', 'todo', datetime('now', '+2 days'), 'demo_user_1', 'demo_user_1'),
@@ -217,7 +225,7 @@ export function initDatabase() {
       `).run();
     }
 
-    console.log('Banco de dados SQLite inicializado com sucesso em:', config.databasePath);
+    console.log('✦ SQLite Nativo (node:sqlite) inicializado com sucesso em:', config.databasePath);
   } catch (err: any) {
     console.warn('Aviso: SQLite nativo não disponível, utilizando persistência JSON resiliente:', err.message);
     useJsonFallback = true;
@@ -234,14 +242,14 @@ export function initDatabase() {
 // Queries de Usuários
 export function findUserById(id: string): User | null {
   if (!useJsonFallback && sqliteDb) {
-    return (sqliteDb.prepare('SELECT * FROM users WHERE id = ?').get(id) as User) || null;
+    return (sqliteDb.prepare('SELECT * FROM users WHERE id = ?').get(id) as unknown as User) || null;
   }
   return memoryStore.users.find(u => u.id === id) || null;
 }
 
 export function findUserByEmail(email: string): User | null {
   if (!useJsonFallback && sqliteDb) {
-    return (sqliteDb.prepare('SELECT * FROM users WHERE email = ?').get(email) as User) || null;
+    return (sqliteDb.prepare('SELECT * FROM users WHERE email = ?').get(email) as unknown as User) || null;
   }
   return memoryStore.users.find(u => u.email === email) || null;
 }
@@ -250,16 +258,11 @@ export function upsertUser(user: User): User {
   if (!useJsonFallback && sqliteDb) {
     sqliteDb.prepare(`
       INSERT INTO users (id, email, name, avatar_url)
-      VALUES (@id, @email, @name, @avatar_url)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         avatar_url = excluded.avatar_url
-    `).run({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar_url: user.avatar_url || null,
-    });
+    `).run(user.id, user.email, user.name, user.avatar_url || null);
     return findUserById(user.id)!;
   }
 
@@ -278,7 +281,7 @@ export function upsertUser(user: User): User {
 
 export function listUsers(): User[] {
   if (!useJsonFallback && sqliteDb) {
-    return sqliteDb.prepare('SELECT id, email, name, avatar_url FROM users ORDER BY name ASC').all() as User[];
+    return sqliteDb.prepare('SELECT id, email, name, avatar_url FROM users ORDER BY name ASC').all() as unknown as User[];
   }
   return memoryStore.users;
 }
@@ -298,7 +301,7 @@ export function listTasks(): Task[] {
       LEFT JOIN users u ON t.assigned_to = u.id
       LEFT JOIN users creator ON t.created_by = creator.id
       ORDER BY t.created_at DESC
-    `).all() as Task[];
+    `).all() as unknown as Task[];
   }
 
   return memoryStore.tasks.map(t => {
@@ -330,7 +333,7 @@ export function getTaskById(id: string): { task: Task; comments: Comment[]; deli
       LEFT JOIN users u ON t.assigned_to = u.id
       LEFT JOIN users creator ON t.created_by = creator.id
       WHERE t.id = ?
-    `).get(id) as Task;
+    `).get(id) as unknown as Task;
 
     if (!task) return null;
 
@@ -340,7 +343,7 @@ export function getTaskById(id: string): { task: Task; comments: Comment[]; deli
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.task_id = ?
       ORDER BY c.created_at ASC
-    `).all(id) as Comment[];
+    `).all(id) as unknown as Comment[];
 
     const deliveries = sqliteDb.prepare(`
       SELECT d.*, u.name as user_name, u.avatar_url as user_avatar
@@ -348,7 +351,7 @@ export function getTaskById(id: string): { task: Task; comments: Comment[]; deli
       LEFT JOIN users u ON d.user_id = u.id
       WHERE d.task_id = ?
       ORDER BY d.created_at DESC
-    `).all(id) as Delivery[];
+    `).all(id) as unknown as Delivery[];
 
     return { task, comments, deliveries };
   }
@@ -403,8 +406,18 @@ export function createTask(task: Partial<Task> & { title: string; created_by: st
   if (!useJsonFallback && sqliteDb) {
     sqliteDb.prepare(`
       INSERT INTO tasks (id, title, description, status, due_date, assigned_to, created_by, created_at, updated_at)
-      VALUES (@id, @title, @description, @status, @due_date, @assigned_to, @created_by, @created_at, @updated_at)
-    `).run(newTask);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      newTask.id,
+      newTask.title,
+      newTask.description,
+      newTask.status,
+      newTask.due_date,
+      newTask.assigned_to,
+      newTask.created_by,
+      newTask.created_at!,
+      newTask.updated_at!
+    );
     return listTasks().find(t => t.id === id)!;
   }
 
@@ -417,25 +430,21 @@ export function updateTask(id: string, updates: Partial<Task>): Task | null {
   const now = new Date().toISOString();
 
   if (!useJsonFallback && sqliteDb) {
-    const existing = sqliteDb.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task;
+    const existing = sqliteDb.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as unknown as Task;
     if (!existing) return null;
 
-    const merged = {
-      title: updates.title !== undefined ? updates.title : existing.title,
-      description: updates.description !== undefined ? updates.description : existing.description,
-      status: updates.status !== undefined ? updates.status : existing.status,
-      due_date: updates.due_date !== undefined ? updates.due_date : existing.due_date,
-      assigned_to: updates.assigned_to !== undefined ? updates.assigned_to : existing.assigned_to,
-      updated_at: now,
-      id,
-    };
+    const title = updates.title !== undefined ? updates.title : existing.title;
+    const description = updates.description !== undefined ? updates.description : existing.description;
+    const status = updates.status !== undefined ? updates.status : existing.status;
+    const due_date = updates.due_date !== undefined ? updates.due_date : existing.due_date;
+    const assigned_to = updates.assigned_to !== undefined ? updates.assigned_to : existing.assigned_to;
 
     sqliteDb.prepare(`
       UPDATE tasks 
-      SET title = @title, description = @description, status = @status, 
-          due_date = @due_date, assigned_to = @assigned_to, updated_at = @updated_at
-      WHERE id = @id
-    `).run(merged);
+      SET title = ?, description = ?, status = ?, 
+          due_date = ?, assigned_to = ?, updated_at = ?
+      WHERE id = ?
+    `).run(title, description, status, due_date, assigned_to, now, id);
 
     return listTasks().find(t => t.id === id) || null;
   }
@@ -455,7 +464,7 @@ export function updateTask(id: string, updates: Partial<Task>): Task | null {
 export function deleteTask(id: string): boolean {
   if (!useJsonFallback && sqliteDb) {
     const info = sqliteDb.prepare('DELETE FROM tasks WHERE id = ?').run(id);
-    return info.changes > 0;
+    return Number(info.changes) > 0;
   }
 
   const initialLen = memoryStore.tasks.length;
@@ -467,7 +476,7 @@ export function deleteTask(id: string): boolean {
 }
 
 // Entregas e Comentários
-export function addDelivery(delivery: { task_id: string; user_id: string; content: string; attachment_url?: string }): Delivery {
+export function addDelivery(delivery: { task_id: string; user_id: string; content: string; attachment_url?: string | null }): Delivery {
   const id = `del_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = new Date().toISOString();
   const newDelivery: Delivery = {
@@ -482,8 +491,15 @@ export function addDelivery(delivery: { task_id: string; user_id: string; conten
   if (!useJsonFallback && sqliteDb) {
     sqliteDb.prepare(`
       INSERT INTO deliveries (id, task_id, user_id, content, attachment_url, created_at)
-      VALUES (@id, @task_id, @user_id, @content, @attachment_url, @created_at)
-    `).run(newDelivery);
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      newDelivery.id,
+      newDelivery.task_id,
+      newDelivery.user_id,
+      newDelivery.content,
+      newDelivery.attachment_url,
+      newDelivery.created_at!
+    );
 
     const user = findUserById(delivery.user_id);
     return {
@@ -506,7 +522,7 @@ export function addDelivery(delivery: { task_id: string; user_id: string; conten
 export function deleteDelivery(id: string): boolean {
   if (!useJsonFallback && sqliteDb) {
     const info = sqliteDb.prepare('DELETE FROM deliveries WHERE id = ?').run(id);
-    return info.changes > 0;
+    return Number(info.changes) > 0;
   }
   const len = memoryStore.deliveries.length;
   memoryStore.deliveries = memoryStore.deliveries.filter(d => d.id !== id);
@@ -528,8 +544,14 @@ export function addComment(comment: { task_id: string; user_id: string; content:
   if (!useJsonFallback && sqliteDb) {
     sqliteDb.prepare(`
       INSERT INTO comments (id, task_id, user_id, content, created_at)
-      VALUES (@id, @task_id, @user_id, @content, @created_at)
-    `).run(newComment);
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      newComment.id,
+      newComment.task_id,
+      newComment.user_id,
+      newComment.content,
+      newComment.created_at!
+    );
 
     const user = findUserById(comment.user_id);
     return {
@@ -552,11 +574,10 @@ export function addComment(comment: { task_id: string; user_id: string; content:
 export function deleteComment(id: string): boolean {
   if (!useJsonFallback && sqliteDb) {
     const info = sqliteDb.prepare('DELETE FROM comments WHERE id = ?').run(id);
-    return info.changes > 0;
+    return Number(info.changes) > 0;
   }
   const len = memoryStore.comments.length;
   memoryStore.comments = memoryStore.comments.filter(c => c.id !== id);
   saveJsonStore();
   return memoryStore.comments.length < len;
 }
-
