@@ -1,15 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { DatabaseSync } from 'node:sqlite';
 import { config } from './config.js';
-
-interface DatabaseSyncInstance {
-  exec(sql: string): void;
-  prepare(sql: string): {
-    run(...args: any[]): { changes: number | bigint; lastInsertRowid: number | bigint };
-    get(...args: any[]): any;
-    all(...args: any[]): any[];
-  };
-}
 
 export interface User {
   id: string;
@@ -58,7 +50,7 @@ export interface Comment {
   user_avatar?: string;
 }
 
-let sqliteDb: DatabaseSyncInstance | null = null;
+let sqliteDb: DatabaseSync | null = null;
 let useJsonFallback = false;
 
 // Fallback in-memory/JSON store
@@ -71,69 +63,10 @@ interface JsonStorage {
 
 const jsonDbPath = path.resolve(path.dirname(config.databasePath), 'fallback_store.json');
 let memoryStore: JsonStorage = {
-  users: [
-    {
-      id: 'demo_user_1',
-      email: 'demo@tasks.minimal',
-      name: 'Equipe Tasks',
-      avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=tasks',
-      created_at: new Date().toISOString()
-    }
-  ],
-  tasks: [
-    {
-      id: '1',
-      title: 'Configurar servidor VPS e Caddy com SSL',
-      description: 'Garantir que a porta 80 e 443 estão liberadas no firewall e apontar o domínio DNS.',
-      status: 'todo',
-      due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
-      assigned_to: 'demo_user_1',
-      created_by: 'demo_user_1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      title: 'Validar autenticação Google OAuth no frontend',
-      description: 'Obter o client ID no console do Google Cloud e testar o fluxo de login em tela única.',
-      status: 'doing',
-      due_date: new Date(Date.now() + 86400000).toISOString(),
-      assigned_to: 'demo_user_1',
-      created_by: 'demo_user_1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      title: 'Definir paleta de cores Dark Minimalist (Preto & Roxo)',
-      description: 'Construir a identidade visual sóbria, contrastada e sem poluição.',
-      status: 'done',
-      due_date: new Date().toISOString(),
-      assigned_to: 'demo_user_1',
-      created_by: 'demo_user_1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ],
-  deliveries: [
-    {
-      id: 'del_1',
-      task_id: '3',
-      user_id: 'demo_user_1',
-      content: 'Especificação do design system preto e roxo concluída.',
-      attachment_url: 'https://github.com',
-      created_at: new Date().toISOString()
-    }
-  ],
-  comments: [
-    {
-      id: 'com_1',
-      task_id: '2',
-      user_id: 'demo_user_1',
-      content: 'Client ID gerado com sucesso. Resta vincular no .env da VPS.',
-      created_at: new Date().toISOString()
-    }
-  ]
+  users: [],
+  tasks: [],
+  deliveries: [],
+  comments: []
 };
 
 function saveJsonStore() {
@@ -153,12 +86,10 @@ export function initDatabase() {
   }
 
   try {
-    const { DatabaseSync } = require('node:sqlite');
-    const db = new DatabaseSync(config.databasePath) as DatabaseSyncInstance;
-    sqliteDb = db;
-    db.exec('PRAGMA foreign_keys = ON;');
+    sqliteDb = new DatabaseSync(config.databasePath);
+    sqliteDb.exec('PRAGMA foreign_keys = ON;');
 
-    db.exec(`
+    sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -208,22 +139,9 @@ export function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
     `);
 
-    // Inserir usuário demo se banco estiver vazio
-    const count = db.prepare('SELECT count(*) as c FROM tasks').get() as { c: number | bigint };
-    if (Number(count.c) === 0) {
-      db.prepare(`
-        INSERT OR IGNORE INTO users (id, email, name, avatar_url)
-        VALUES (?, ?, ?, ?)
-      `).run('demo_user_1', 'demo@tasks.minimal', 'Equipe Tasks', 'https://api.dicebear.com/7.x/bottts/svg?seed=tasks');
-
-      db.prepare(`
-        INSERT INTO tasks (id, title, description, status, due_date, assigned_to, created_by)
-        VALUES 
-          ('1', 'Configurar servidor VPS e Caddy com SSL', 'Garantir que a porta 80 e 443 estão liberadas no firewall e apontar o domínio DNS.', 'todo', datetime('now', '+2 days'), 'demo_user_1', 'demo_user_1'),
-          ('2', 'Validar autenticação Google OAuth no frontend', 'Obter o client ID no console do Google Cloud e testar o fluxo de login em tela única.', 'doing', datetime('now', '+1 days'), 'demo_user_1', 'demo_user_1'),
-          ('3', 'Definir paleta de cores Dark Minimalist (Preto & Roxo)', 'Construir a identidade visual sóbria, contrastada e sem poluição.', 'done', datetime('now'), 'demo_user_1', 'demo_user_1')
-      `).run();
-    }
+      // Limpar tarefas genéricas de exemplo caso existam
+      db.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
+      db.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
 
     console.log('✦ SQLite Nativo (node:sqlite) inicializado com sucesso em:', config.databasePath);
   } catch (err: any) {
@@ -232,7 +150,7 @@ export function initDatabase() {
     if (fs.existsSync(jsonDbPath)) {
       try {
         memoryStore = JSON.parse(fs.readFileSync(jsonDbPath, 'utf-8'));
-      } catch (e) {}
+      } catch (e) { }
     } else {
       saveJsonStore();
     }

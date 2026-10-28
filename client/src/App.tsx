@@ -85,7 +85,7 @@ export const App: React.FC = () => {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const res = await api.loginDemo('Desenvolvedor VPS', 'dev@vps.tasks');
+      const res = await api.loginDemo('WorldSkills', 'ws@worldskills.org');
       setUser(res.user);
     } catch (err: any) {
       setAuthError(err.message || 'Falha no login de demonstração.');
@@ -97,7 +97,7 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await api.logout();
-    } catch (e) {}
+    } catch (e) { }
     setUser(null);
     setTasks([]);
   };

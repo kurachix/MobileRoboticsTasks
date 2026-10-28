@@ -5,24 +5,26 @@
 @layer base {
   body {
     background-color: #09090b;
+    background-image: radial-gradient(rgba(139, 92, 246, 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
     color: #f4f4f5;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
-  /* Custom scrollbar para estética minimalista dark */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
+
   ::-webkit-scrollbar-track {
     background: #09090b;
   }
+
   ::-webkit-scrollbar-thumb {
-    background: #262636;
-    border-radius: 9999px;
+    background: #232330;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: #4c1d95;
+    background: #7c3aed;
   }
 }
-

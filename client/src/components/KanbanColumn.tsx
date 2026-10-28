@@ -20,59 +20,52 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onMoveTask,
   onAddTask,
 }) => {
-  // Dot colors according to status
-  const dotColor =
+  const diamondStyle =
     id === 'todo'
-      ? 'bg-zinc-400'
-      : id === 'doing'
-      ? 'bg-purple-500 ring-4 ring-purple-500/20 animate-pulse'
-      : 'bg-emerald-400';
+        ? 'border-zinc-500 bg-transparent'
+        : id === 'doing'
+      ?'border-purple-400 bg-purple-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]'
+      : 'border-purple-500/60 bg-purple-500/30';
 
-  return (
-    <div className="flex-1 min-w-[300px] flex flex-col bg-[#121217] rounded-2xl border border-[#262636] overflow-hidden">
+return (
+    <div className="flex-1 min-w-[300px] flex flex-col bg-[#111116] border border-[#232330]">
       {/* Column Header */}
-      <div className="p-4 border-b border-[#262636] flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-          <h2 className="text-sm font-semibold text-zinc-200 tracking-tight">{title}</h2>
-          <span className="text-xs font-mono text-zinc-500 bg-[#181822] px-2 py-0.5 rounded-full border border-[#262636]">
-            {tasks.length}
-          </span>
+        <div className="px-4 py-3 border-b border-[#232330] flex items-center justify-between bg-[#13131a]">
+          <div className="flex items-center gap-2.5">
+              <span className={`w-2 h-2 rotate-45 border ${diamondStyle}`} />
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-200">
+                {title}
+              </h2>
+              <span className="text-[11px] font-mono text-purple-400 bg-purple-950/30 px-1.5 py-0.5 border border-purple-500/20">
+                {String(tasks.length).padStart(2, '0')}
+              </span>
+          </div>
+
+          <button
+            onClick={() => onAddTask(id)}
+            className="p-1 text-zinc-500 hover:text-purple-400 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
 
-        <button
-          onClick={() => onAddTask(id)}
-          title={`Adicionar tarefa em ${title}`}
-          className="p-1 rounded-lg text-zinc-400 hover:text-purple-300 hover:bg-[#181822] transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Task List */}
-      <div className="flex-1 p-3 space-y-3 overflow-y-auto max-h-[calc(100vh-210px)]">
-        {tasks.length === 0 ? (
-          <div className="h-32 flex flex-col items-center justify-center border border-dashed border-[#262636] rounded-xl p-4 text-center">
-            <p className="text-xs text-zinc-500 font-normal">Nenhuma tarefa aqui</p>
-            <button
-              onClick={() => onAddTask(id)}
-              className="mt-2 text-xs text-purple-400 hover:text-purple-300 font-medium"
-            >
-              + Adicionar
-            </button>
-          </div>
-        ) : (
+        {/* Task List */}
+          <div className="flex-1 p-2.5 space-y-2 overflow-y-auto max-h-[calc(100vh-140px)]">
+            {tasks.length === 0 ? (
+                <div className="h-24 flex items-center justify-center border border-dashed border-[#1e1e2a] text-zinc-700 font-mono text-xs select-none">
+                  —
+                </div>
+                ) : (
           tasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onClick={() => onTaskClick(task)}
-              onMoveStatus={newStatus => onMoveTask(task.id, newStatus)}
-            />
-          ))
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onClick={() => onTaskClick(task)}
+                  onMoveStatus={newStatus => onMoveTask(task.id, newStatus)}
+                />
+                ))
         )}
-      </div>
+              </div>
     </div>
-  );
+          );
 };
-
