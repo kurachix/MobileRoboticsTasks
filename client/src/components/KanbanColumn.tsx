@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Task, TaskStatus } from '../types';
 import { TaskCard } from './TaskCard';
 import { Plus } from 'lucide-react';
@@ -7,65 +7,126 @@ interface KanbanColumnProps {
   id: TaskStatus;
   title: string;
   tasks: Task[];
+  draggingTaskId: string | null;
   onTaskClick: (task: Task) => void;
   onMoveTask: (taskId: string, newStatus: TaskStatus) => void;
   onAddTask: (status: TaskStatus) => void;
+  onDragStart: (taskId: string) => void;
+  onDragEnd: () => void;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   id,
   title,
   tasks,
+  draggingTaskId,
   onTaskClick,
   onMoveTask,
   onAddTask,
+  onDragStart,
+  onDragEnd,
 }) => {
-  const diamondStyle =
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const indicatorStyle =
     id === 'todo'
-        ? 'border-zinc-500 bg-transparent'
-        : id === 'doing'
-      ?'border-purple-400 bg-purple-500 shadow-[0_0_8px_rgba(139,92,246,0.6)]'
-      : 'border-purple-500/60 bg-purple-500/30';
+      ?'bg-zinc-400 shadow-[0_0_8px_rgba(161,161,170,0.4)]'
+      : id === 'doing'
+  ? 'bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.85)] animate-pulse'
+  : 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]';
 
-return (
-    <div className="flex-1 min-w-[300px] flex flex-col bg-[#111116] border border-[#232330]">
-      {/* Column Header */}
-        <div className="px-4 py-3 border-b border-[#232330] flex items-center justify-between bg-[#13131a]">
-          <div className="flex items-center gap-2.5">
-              <span className={`w-2 h-2 rotate-45 border ${diamondStyle}`} />
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-200">
-                {title}
-              </h2>
-              <span className="text-[11px] font-mono text-purple-400 bg-purple-950/30 px-1.5 py-0.5 border border-purple-500/20">
-                {String(tasks.length).padStart(2, '0')}
-              </span>
-          </div>
+    const topAccentGradient =
+    id === 'todo'
+    ? 'from-transparent via-zinc-500/30 to-transparent'
+    : id === 'doing'
+    ? 'from-transparent via-purple-500/70 to-transparent'
+    : 'from-transparent via-emerald-500/40 to-transparent';
 
-          <button
-            onClick={() => onAddTask(id)}
-            className="p-1 text-zinc-500 hover:text-purple-400 transition-colors"
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (!isDragOver) {
+        setIsDragOver(true);
+    }
+  };
+
+      const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDragOver(false);
+    }
+  };
+
+        const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const taskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+          if (taskId) {
+            onMoveTask(taskId, id);
+    }
+          onDragEnd();
+  };
+
+          return (
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`relative flex-1 min-w-[310px] flex flex-col rounded-3xl bg-[#0d0d14]/80 backdrop-blur-xl border transition-all duration-300 overflow-hidden ${isDragOver
+                ? 'border-purple-500 bg-purple-950/20 scale-[1.015] shadow-[0_0_45px_rgba(139,92,246,0.25)]'
+                : 'border-white/[0.07] shadow-[0_10px_40px_rgba(0,0,0,0.45)]'
+              }`}
           >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
+            {/* Top Glowing Line */}
+            <div className={`h-[1px] w-full bg-gradient-to-r ${topAccentGradient}`} />
 
-        {/* Task List */}
-          <div className="flex-1 p-2.5 space-y-2 overflow-y-auto max-h-[calc(100vh-140px)]">
-            {tasks.length === 0 ? (
-                <div className="h-24 flex items-center justify-center border border-dashed border-[#1e1e2a] text-zinc-700 font-mono text-xs select-none">
-                  —
+            {/* Column Header */}
+              <div className="px-5 py-4 border-b border-white/[0.05] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`w-2.5 h-2.5 rotate-45 rounded-[2px] ${indicatorStyle}`} />
+                  <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-zinc-100">
+                    {title}
+                  </h2>
+                  <span className="text-[11px] font-mono font-semibold text-purple-300 bg-purple-500/15 px-2.5 py-0.5 rounded-full border border-purple-500/25">
+                    {tasks.length}
+                  </span>
                 </div>
-                ) : (
-          tasks.map(task => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onClick={() => onTaskClick(task)}
-                  onMoveStatus={newStatus => onMoveTask(task.id, newStatus)}
-                />
-                ))
-        )}
+
+        <button
+                  onClick={() => onAddTask(id)}
+                  className="p-1.5 rounded-xl bg-white/[0.03] hover:bg-purple-500/20 text-zinc-400 hover:text-purple-300 border border-transparent hover:border-purple-500/30 transition-all duration-200"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
-    </div>
-          );
+
+              {/* Task List & Drop Zone */}
+              <div className="flex-1 p-3.5 space-y-3 overflow-y-auto min-h-[260px] max-h-[calc(100vh-180px)]">
+                {tasks.map(task => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isDragging={draggingTaskId === task.id}
+                    onClick={() => onTaskClick(task)}
+                    onMoveStatus={newStatus => onMoveTask(task.id, newStatus)}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
+                  />
+                ))}
+
+                {/* Drop Indicator / Empty State */}
+                {(tasks.length === 0 || isDragOver) && (
+                  <div
+                    className={`h-28 rounded-2xl border border-dashed flex items-center justify-center transition-all duration-200 select-none ${isDragOver
+                        ? 'border-purple-400 bg-purple-500/10 text-purple-300 scale-[0.99]'
+                        : 'border-white/[0.06] text-zinc-700'
+                      }`}
+                  >
+                  < span className="text-xs font-mono tracking-widest uppercase">
+                {isDragOver ? 'Soltar aqui' : '—'}
+              </span>
+            </div>
+        )}
+        </div>
+      </div>
+      );
 };

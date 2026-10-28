@@ -19,6 +19,7 @@ exports.addComment = addComment;
 exports.deleteComment = deleteComment;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const node_sqlite_1 = require("node:sqlite");
 const config_js_1 = require("./config.js");
 let sqliteDb = null;
 let useJsonFallback = false;
@@ -45,11 +46,9 @@ function initDatabase() {
         fs_1.default.mkdirSync(dir, { recursive: true });
     }
     try {
-        const { DatabaseSync } = require('node:sqlite');
-        const db = new DatabaseSync(config_js_1.config.databasePath);
-        sqliteDb = db;
-        db.exec('PRAGMA foreign_keys = ON;');
-        db.exec(`
+        sqliteDb = new node_sqlite_1.DatabaseSync(config_js_1.config.databasePath);
+        sqliteDb.exec('PRAGMA foreign_keys = ON;');
+        sqliteDb.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -99,8 +98,8 @@ function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
     `);
         // Limpar tarefas genéricas de exemplo caso existam
-        db.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
-        db.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
+        sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
+        sqliteDb.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
         console.log('✦ SQLite Nativo (node:sqlite) inicializado com sucesso em:', config_js_1.config.databasePath);
     }
     catch (err) {

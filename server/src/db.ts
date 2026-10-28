@@ -139,9 +139,9 @@ export function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
     `);
 
-      // Limpar tarefas genéricas de exemplo caso existam
-      db.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
-      db.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
+    // Limpar tarefas genéricas de exemplo caso existam
+    sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
+    sqliteDb.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
 
     console.log('✦ SQLite Nativo (node:sqlite) inicializado com sucesso em:', config.databasePath);
   } catch (err: any) {

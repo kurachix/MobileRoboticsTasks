@@ -150,61 +150,66 @@ export const App: React.FC = () => {
   // 1. Tela de Carregamento Inicial
   if (isAuthLoading && !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
-        <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
-      </div>
-    );
+        <div className="min-h-screen flex items-center justify-center bg-[#060609]">
+          <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
+        </div>
+        );
   }
 
-  // 2. Primeira Tela: Apenas Login Google
-  if (!user) {
+        // 2. Primeira Tela: Apenas Login Google
+        if (!user) {
     return (
-      <LoginView
-        googleClientId={googleClientId}
-        onGoogleSuccess={handleGoogleSuccess}
-        onDemoLogin={handleDemoLogin}
-        isLoading={isAuthLoading}
-        error={authError}
-      />
-    );
+        <LoginView
+          googleClientId={googleClientId}
+          onGoogleSuccess={handleGoogleSuccess}
+          onDemoLogin={handleDemoLogin}
+          isLoading={isAuthLoading}
+          error={authError}
+        />
+        );
   }
 
-  // 3. Sistema Logado: Header Minimalista + Kanban das 3 Colunas
-  return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col">
-      <Header
-        user={user}
-        onNewTask={() => handleOpenNewTask('todo')}
-        onLogout={handleLogout}
-      />
+        // 3. Sistema Logado: Header Minimalista + Kanban das 3 Colunas
+        return (
+          <div className="relative min-h-screen bg-[#060609] text-zinc-100 flex flex-col overflow-x-hidden">
+            {/* Ambient Background Lighting */}
+            <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
+            <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-600/12 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
+            <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-700/10 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
 
-      <main className="flex-1 overflow-x-auto">
-        {isTasksLoading && tasks.length === 0 ? (
-          <div className="py-20 flex justify-center items-center">
-            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            <Header
+              user={user}
+              onNewTask={() => handleOpenNewTask('todo')}
+              onLogout={handleLogout}
+            />
+
+              <main className="relative z-10 flex-1 overflow-x-auto">
+                {isTasksLoading && tasks.length === 0 ? (
+                  <div className="py-20 flex justify-center items-center">
+                    <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <KanbanBoard
+                    tasks={tasks}
+                    onTaskClick={handleOpenEditTask}
+                    onMoveTask={handleMoveTask}
+                    onAddTask={handleOpenNewTask}
+                  />
+                )}
+              </main>
+
+              {/* Modal de Detalhes / Criação da Tarefa */}
+              {isModalOpen && (
+                <TaskModal
+                  task={selectedTask}
+                  initialStatus={initialColumnStatus}
+                  users={users}
+                  onClose={() => setIsModalOpen(false)}
+                  onSave={handleTaskSaved}
+                  onDelete={handleTaskDeleted}
+                />
+              )}
           </div>
-        ) : (
-          <KanbanBoard
-            tasks={tasks}
-            onTaskClick={handleOpenEditTask}
-            onMoveTask={handleMoveTask}
-            onAddTask={handleOpenNewTask}
-          />
-        )}
-      </main>
-
-      {/* Modal de Detalhes / Criação da Tarefa */}
-      {isModalOpen && (
-        <TaskModal
-          task={selectedTask}
-          initialStatus={initialColumnStatus}
-          users={users}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleTaskSaved}
-          onDelete={handleTaskDeleted}
-        />
-      )}
-    </div>
-  );
+          );
 };
 
