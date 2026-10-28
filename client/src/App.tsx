@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, Task, TaskStatus } from './types';
 import { api } from './api';
-import { Header } from './components/Header';
+import { Header, ActiveTab } from './components/Header';
 import { LoginView } from './components/LoginView';
 import { KanbanBoard } from './components/KanbanBoard';
+import { CreateTaskView } from './components/CreateTaskView';
 import { TaskModal } from './components/TaskModal';
 import { ProfileModal } from './components/ProfileModal';
 
@@ -14,16 +15,18 @@ export const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Estado das 2 Guias (Kanban vs Nova Tarefa)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('board');
+
   // Estado do Kanban e Usuários
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isTasksLoading, setIsTasksLoading] = useState<boolean>(false);
 
-  // Estado do Modal
+  // Estado dos Modais
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [initialColumnStatus, setInitialColumnStatus] = useState<TaskStatus>('todo');
 
   // Carregar configurações de autenticação e verificar sessão existente
   useEffect(() => {
@@ -100,10 +103,10 @@ export const App: React.FC = () => {
     setIsAuthLoading(true);
     setAuthError(null);
     try {
-      const res = await api.loginDemo('WorldSkills', 'ws@worldskills.org');
+      const res = await api.loginDemo('SENAI', 'senai@spskills.com');
       setUser(res.user);
     } catch (err: any) {
-      setAuthError(err.message || 'Falha no login de demonstração.');
+      setAuthError(err.message || 'Falha no login.');
     } finally {
       setIsAuthLoading(false);
     }
@@ -112,67 +115,59 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await api.logout();
-    } catch (e) { }
-    setUser(null);
-    setTasks([]);
-  };
+  } catch (e) { }
+  setUser(null);
+  setTasks([]);
+};
 
-  // Handlers de Tarefas
-  const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
-    // Atualização otimista na interface
-    setTasks(prev =>
-      prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+// Handlers de Tarefas
+const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
+  setTasks(prev =>
+    prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
+  );
 
-    try {
-      await api.updateTask(taskId, { status: newStatus });
-    } catch (err) {
-      // Reverter se falhar
-      loadWorkspaceData();
+  try {
+    await api.updateTask(taskId, { status: newStatus });
+  } catch (err) {
+    loadWorkspaceData();
+  }
+};
+
+const handleOpenEditTask = (task: Task) => {
+  setSelectedTask(task);
+  setIsModalOpen(true);
+};
+
+const handleTaskSaved = (savedTask: Task) => {
+  setTasks(prev => {
+    const exists = prev.some(t => t.id === savedTask.id);
+    if (exists) {
+      return prev.map(t => (t.id === savedTask.id ? savedTask : t));
     }
-  };
+    return [savedTask, ...prev];
+  });
+};
 
-  const handleOpenNewTask = (status: TaskStatus = 'todo') => {
-    setSelectedTask(null);
-    setInitialColumnStatus(status);
-    setIsModalOpen(true);
-  };
+const handleTaskDeleted = async (taskId: string) => {
+  setTasks(prev => prev.filter(t => t.id !== taskId));
+  try {
+    await api.deleteTask(taskId);
+  } catch (err) {
+    loadWorkspaceData();
+  }
+};
 
-  const handleOpenEditTask = (task: Task) => {
-    setSelectedTask(task);
-    setIsModalOpen(true);
-  };
-
-  const handleTaskSaved = (savedTask: Task) => {
-    setTasks(prev => {
-      const exists = prev.some(t => t.id === savedTask.id);
-      if (exists) {
-        return prev.map(t => (t.id === savedTask.id ? savedTask : t));
-      }
-      return [savedTask, ...prev];
-    });
-  };
-
-  const handleTaskDeleted = async (taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    try {
-      await api.deleteTask(taskId);
-    } catch (err) {
-      loadWorkspaceData();
-    }
-  };
-
-  // 1. Tela de Carregamento Inicial
-  if (isAuthLoading && !user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#060609]">
+// 1. Tela de Carregamento Inicial
+if (isAuthLoading && !user) {
+  return (
+      <div className="min-h-screen flex items-center justify-center bg-[#050508]">
         <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
       </div>
-    );
+      );
   }
 
-  // 2. Primeira Tela: Apenas Login Google
-  if (!user) {
+      // 2. Primeira Tela: Login
+      if (!user) {
     return (
       <LoginView
         googleClientId={googleClientId}
@@ -182,63 +177,70 @@ export const App: React.FC = () => {
         isLoading={isAuthLoading}
         error={authError}
       />
-    );
+      );
   }
 
-  // 3. Sistema Logado: Header Minimalista + Kanban das 3 Colunas
-  return (
-    <div className="relative min-h-screen bg-[#060609] text-zinc-100 flex flex-col overflow-x-hidden">
-      {/* Ambient Background Lighting */}
-      <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
-      <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-600/12 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
-      <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-700/10 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
+      // 3. Sistema Logado: Header com 2 Guias + Conteúdo da Guia Ativa
+      return (
+        <div className="relative min-h-screen bg-[#050508] text-zinc-100 flex flex-col overflow-x-hidden">
+          {/* Ambient Background Lighting */}
+          <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
+          <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-600/12 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
+          <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-700/10 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
 
-      <Header
-        user={user}
-        onOpenProfile={() => setIsProfileOpen(true)}
-        onLogout={handleLogout}
-      />
-
-      <main className="relative z-10 flex-1 overflow-x-auto">
-        {isTasksLoading && tasks.length === 0 ? (
-          <div className="py-20 flex justify-center items-center">
-            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          <KanbanBoard
-            tasks={tasks}
-            users={users}
-            onTaskClick={handleOpenEditTask}
-            onMoveTask={handleMoveTask}
-            onTaskCreated={handleTaskSaved}
+          <Header
+            user={user}
+            activeTab={activeTab}
+            taskCount={tasks.length}
+            onChangeTab={setActiveTab}
+            onOpenProfile={() => setIsProfileOpen(true)}
+            onLogout={handleLogout}
           />
+
+          <main className="relative z-10 flex-1 overflow-x-auto">
+            {isTasksLoading && tasks.length === 0 ? (
+              <div className="py-20 flex justify-center items-center">
+                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ): activeTab === 'board' ? (
+            <KanbanBoard
+              tasks={tasks}
+              onTaskClick={handleOpenEditTask}
+              onMoveTask={handleMoveTask}
+            />
+            ) : (
+            <CreateTaskView
+              users={users}
+              onTaskCreated={newTask => {
+                handleTaskSaved(newTask);
+                setActiveTab('board');
+              }}
+            />
         )}
-      </main>
+          </main>
 
-      {/* Modal de Detalhes / Criação da Tarefa */}
-      {isModalOpen && (
-        <TaskModal
-          task={selectedTask}
-          initialStatus={initialColumnStatus}
-          users={users}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleTaskSaved}
-          onDelete={handleTaskDeleted}
-        />
-      )}
+          {/* Modal de Detalhes / Edição da Tarefa */}
+          {isModalOpen && (
+            <TaskModal
+              task={selectedTask}
+              users={users}
+              onClose={() => setIsModalOpen(false)}
+              onSave={handleTaskSaved}
+              onDelete={handleTaskDeleted}
+            />
+          )}
 
-      {/* Modal de Configuração de Perfil */}
-      {isProfileOpen && (
-        <ProfileModal
-          user={user}
-          onClose={() => setIsProfileOpen(false)}
-          onUpdated={updatedUser => {
-            setUser(updatedUser);
-            loadWorkspaceData();
-          }}
-        />
-      )}
-    </div>
-  );
+          {/* Modal de Configuração de Perfil */}
+          {isProfileOpen && (
+            <ProfileModal
+              user={user}
+              onClose={() => setIsProfileOpen(false)}
+              onUpdated={updatedUser => {
+                setUser(updatedUser);
+                loadWorkspaceData();
+              }}
+            />
+          )}
+        </div>
+        );
 };
-
