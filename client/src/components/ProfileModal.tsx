@@ -240,3 +240,4 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
     </div>
   );
 };
+
