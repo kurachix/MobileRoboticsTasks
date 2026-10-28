@@ -15,8 +15,8 @@ export const App: React.FC = () => {
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Estado das 2 Guias (Kanban vs Nova Tarefa)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('board');
+  // Estado das 2 Guias (Tela 1: Nova Tarefa -> Tela 2: Kanban)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('create');
 
   // Estado do Kanban e Usuários
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -115,59 +115,59 @@ export const App: React.FC = () => {
   const handleLogout = async () => {
     try {
       await api.logout();
-  } catch (e) { }
-  setUser(null);
-  setTasks([]);
-};
+    } catch (e) { }
+    setUser(null);
+    setTasks([]);
+  };
 
-// Handlers de Tarefas
-const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
-  setTasks(prev =>
-    prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
-  );
+  // Handlers de Tarefas
+  const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
+    setTasks(prev =>
+      prev.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
 
-  try {
-    await api.updateTask(taskId, { status: newStatus });
-  } catch (err) {
-    loadWorkspaceData();
-  }
-};
-
-const handleOpenEditTask = (task: Task) => {
-  setSelectedTask(task);
-  setIsModalOpen(true);
-};
-
-const handleTaskSaved = (savedTask: Task) => {
-  setTasks(prev => {
-    const exists = prev.some(t => t.id === savedTask.id);
-    if (exists) {
-      return prev.map(t => (t.id === savedTask.id ? savedTask : t));
+    try {
+      await api.updateTask(taskId, { status: newStatus });
+    } catch (err) {
+      loadWorkspaceData();
     }
-    return [savedTask, ...prev];
-  });
-};
+  };
 
-const handleTaskDeleted = async (taskId: string) => {
-  setTasks(prev => prev.filter(t => t.id !== taskId));
-  try {
-    await api.deleteTask(taskId);
-  } catch (err) {
-    loadWorkspaceData();
-  }
-};
+  const handleOpenEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setIsModalOpen(true);
+  };
 
-// 1. Tela de Carregamento Inicial
-if (isAuthLoading && !user) {
-  return (
+  const handleTaskSaved = (savedTask: Task) => {
+    setTasks(prev => {
+      const exists = prev.some(t => t.id === savedTask.id);
+      if (exists) {
+        return prev.map(t => (t.id === savedTask.id ? savedTask : t));
+      }
+      return [savedTask, ...prev];
+    });
+  };
+
+  const handleTaskDeleted = async (taskId: string) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    try {
+      await api.deleteTask(taskId);
+    } catch (err) {
+      loadWorkspaceData();
+    }
+  };
+
+  // 1. Tela de Carregamento Inicial
+  if (isAuthLoading && !user) {
+    return (
       <div className="min-h-screen flex items-center justify-center bg-[#050508]">
         <div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
       </div>
-      );
+    );
   }
 
-      // 2. Primeira Tela: Login
-      if (!user) {
+  // 2. Primeira Tela: Login
+  if (!user) {
     return (
       <LoginView
         googleClientId={googleClientId}
@@ -177,38 +177,38 @@ if (isAuthLoading && !user) {
         isLoading={isAuthLoading}
         error={authError}
       />
-      );
+    );
   }
 
-      // 3. Sistema Logado: Header com 2 Guias + Conteúdo da Guia Ativa
-      return (
-        <div className="relative min-h-screen bg-[#050508] text-zinc-100 flex flex-col overflow-x-hidden">
-          {/* Ambient Background Lighting */}
-          <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
-          <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-600/12 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
-          <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-700/10 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
+  // 3. Sistema Logado: Header com 2 Guias + Conteúdo da Guia Ativa
+  return (
+      <div className="relative min-h-screen bg-[#060609] text-zinc-100 flex flex-col overflow-x-hidden">
+        {/* Ambient Background Lighting */}
+        <div className="fixed inset-0 bg-grid-pattern pointer-events-none" />
+        <div className="fixed top-[-120px] left-1/4 w-[500px] h-[500px] bg-purple-900/15 blur-[150px] rounded-full pointer-events-none animate-float-slow" />
+        <div className="fixed bottom-[-120px] right-1/4 w-[450px] h-[450px] bg-violet-950/15 blur-[140px] rounded-full pointer-events-none animate-float-reverse" />
 
-          <Header
-            user={user}
-            activeTab={activeTab}
-            taskCount={tasks.length}
-            onChangeTab={setActiveTab}
-            onOpenProfile={() => setIsProfileOpen(true)}
-            onLogout={handleLogout}
-          />
+        <Header
+          user={user}
+          activeTab={activeTab}
+          taskCount={tasks.length}
+          onChangeTab={setActiveTab}
+          onOpenProfile={() => setIsProfileOpen(true)}
+          onLogout={handleLogout}
+        />
 
-          <main className="relative z-10 flex-1 overflow-x-auto">
-            {isTasksLoading && tasks.length === 0 ? (
-              <div className="py-20 flex justify-center items-center">
-                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ): activeTab === 'board' ? (
+        <main className="relative z-10 flex-1 overflow-x-auto">
+          {isTasksLoading && tasks.length === 0 ? (
+            <div className="py-20 flex justify-center items-center">
+              <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : activeTab === 'board' ? (
             <KanbanBoard
               tasks={tasks}
               onTaskClick={handleOpenEditTask}
               onMoveTask={handleMoveTask}
             />
-            ) : (
+          ) : (
             <CreateTaskView
               users={users}
               onTaskCreated={newTask => {
@@ -216,31 +216,31 @@ if (isAuthLoading && !user) {
                 setActiveTab('board');
               }}
             />
+          )}
+        </main>
+
+        {/* Modal de Detalhes / Edição da Tarefa */}
+        {isModalOpen && (
+          <TaskModal
+            task={selectedTask}
+            users={users}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleTaskSaved}
+            onDelete={handleTaskDeleted}
+          />
         )}
-          </main>
 
-          {/* Modal de Detalhes / Edição da Tarefa */}
-          {isModalOpen && (
-            <TaskModal
-              task={selectedTask}
-              users={users}
-              onClose={() => setIsModalOpen(false)}
-              onSave={handleTaskSaved}
-              onDelete={handleTaskDeleted}
-            />
-          )}
-
-          {/* Modal de Configuração de Perfil */}
-          {isProfileOpen && (
-            <ProfileModal
-              user={user}
-              onClose={() => setIsProfileOpen(false)}
-              onUpdated={updatedUser => {
-                setUser(updatedUser);
-                loadWorkspaceData();
-              }}
-            />
-          )}
-        </div>
-        );
+        {/* Modal de Configuração de Perfil */}
+        {isProfileOpen && (
+          <ProfileModal
+            user={user}
+            onClose={() => setIsProfileOpen(false)}
+            onUpdated={updatedUser => {
+              setUser(updatedUser);
+              loadWorkspaceData();
+            }}
+          />
+        )}
+      </div>
+      );
 };
