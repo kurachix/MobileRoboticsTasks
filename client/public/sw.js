@@ -1,16 +1,17 @@
-const CACHE_NAME = 'senai-tasks-pwa-v1';
+const CACHE_NAME = 'spskills-tasks-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
   '/apple-touch-icon.png',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
-  '/img/senai-logo.png'
+  '/img/senai-logo.png',
+  '/img/worldskills-logo.png'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)).catch(() => { })
   );
   self.skipWaiting();
 });
@@ -30,12 +31,10 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignorar requisições que não sejam GET ou que sejam da API / uploads dinâmicos
   if (request.method !== 'GET' || url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
     return;
   }
 
-  // Estratégia Network-First com fallback para Cache
   event.respondWith(
     fetch(request)
       .then(response => {
@@ -50,4 +49,3 @@ self.addEventListener('fetch', event => {
       .catch(() => caches.match(request).then(cached => cached || caches.match('/')))
   );
 });
-

@@ -1,15 +1,18 @@
 {
   "id": "/",
-  "name": "SENAI Tasks",
-  "short_name": "SENAI Tasks",
-  "description": "Sistema Minimalista de Tarefas SENAI",
+  "name": "SPSKILLS TASKS",
+  "short_name": "SPSKILLS TASKS",
+  "description": "SPSKILLS TASKS",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#060609",
   "theme_color": "#060609",
-  "categories": ["productivity", "utilities"],
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/apple-touch-icon.png",
@@ -43,4 +46,3 @@
     }
   ]
 }
-

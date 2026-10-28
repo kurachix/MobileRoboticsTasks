@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { api } from '../api';
-import { X, Upload, Lock, Check } from 'lucide-react';
+import { X, Upload, Lock, Check, Download } from 'lucide-react';
 
 interface ProfileModalProps {
   user: User;
@@ -116,7 +116,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rotate-45 rounded-[2px] bg-purple-600 shadow-[0_0_10px_rgba(147,51,234,0.7)]" />
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-100">
-              Perfil
+              Ajustes
             </span>
           </div>
 
@@ -178,11 +178,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
                     key={url}
                     type="button"
                     onClick={() => handleSelectPreset(url)}
-                    className={`relative group rounded-2xl p-1.5 bg-[#151520] border transition-all duration-200 flex items-center justify-center active:scale-95 ${
-                      isSelected
+                    className={`relative group rounded-2xl p-1.5 bg-[#151520] border transition-all duration-200 flex items-center justify-center active:scale-95 ${isSelected
                         ? 'border-purple-500 ring-2 ring-purple-500/40 scale-105'
                         : 'border-white/[0.06] hover:border-purple-500/40'
-                    }`}
+                      }`}
                   >
                     <img
                       src={url}
@@ -198,6 +197,46 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
                 );
               })}
             </div>
+          </div>
+
+          {/* Instalar PWA (SPSKILLS TASKS) */}
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#151520] border border-purple-500/20">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0d0d14] border border-purple-500/30 flex items-center justify-center p-1.5 shrink-0">
+                <img
+                  src="/img/worldskills-logo.png"
+                  alt="WorldSkills"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white truncate">SPSKILLS TASKS</div>
+                <div className="text-[10px] text-zinc-400 truncate">Aplicativo PWA</div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={async () => {
+                const promptEvent = window.__deferredPwaPrompt;
+                if (promptEvent) {
+                  try {
+                    await promptEvent.prompt();
+                    const choice = await promptEvent.userChoice;
+                    if (choice.outcome === 'accepted') {
+                      window.__deferredPwaPrompt = null;
+                    }
+                    return;
+                  } catch { }
+                }
+                onClose();
+                window.dispatchEvent(new Event('open-pwa-install'));
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-700 to-violet-800 hover:from-purple-600 hover:to-violet-700 text-white text-[11px] font-bold uppercase tracking-wider transition-all shadow-[0_4px_14px_rgba(109,40,217,0.35)] shrink-0 active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Instalar</span>
+            </button>
           </div>
 
           {/* Password Confirmation */}
