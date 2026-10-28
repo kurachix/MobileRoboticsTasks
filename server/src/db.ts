@@ -143,6 +143,47 @@ export function initDatabase() {
     sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
     sqliteDb.prepare(`DELETE FROM users WHERE id = 'demo_user_1'`).run();
 
+    // Garantir que os usuários da equipe SPSkills / WorldSkills existam para designação
+    const seedUsers = [
+      {
+        id: 'user_carlos',
+        email: 'carlos@spskills.com',
+        name: 'Carlos',
+        avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Carlos&backgroundColor=7c3aed',
+      },
+      {
+        id: 'user_nicolle',
+        email: 'nicolle@spskills.com',
+        name: 'Nicolle',
+        avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Nicolle&backgroundColor=9333ea',
+      },
+      {
+        id: 'user_kurachi',
+        email: 'kurachi@spskills.com',
+        name: 'Kurachi',
+        avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Kurachi&backgroundColor=6d28d9',
+      },
+      {
+        id: 'user_admin',
+        email: 'admin@admin.com',
+        name: 'Admin',
+        avatar_url: 'https://api.dicebear.com/7.x/initials/svg?seed=Admin&backgroundColor=4c1d95',
+      },
+    ];
+
+    const stmtUser = sqliteDb.prepare(`
+      INSERT INTO users (id, email, name, avatar_url)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        email = excluded.email,
+        name = excluded.name,
+        avatar_url = excluded.avatar_url
+    `);
+
+    for (const u of seedUsers) {
+      stmtUser.run(u.id, u.email, u.name, u.avatar_url);
+    }
+
     console.log('✦ SQLite Nativo (node:sqlite) inicializado com sucesso em:', config.databasePath);
   } catch (err: any) {
     console.warn('Aviso: SQLite nativo não disponível, utilizando persistência JSON resiliente:', err.message);

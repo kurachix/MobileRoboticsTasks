@@ -32,6 +32,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Servir pasta de imagens da raiz (/img)
+const imgDir = path.resolve(process.cwd(), 'img');
+if (fs.existsSync(imgDir)) {
+  app.use('/img', express.static(imgDir));
+}
+
 // Servir frontend compilado
 const possiblePublicDirs = [
   path.resolve(process.cwd(), 'client/dist'),

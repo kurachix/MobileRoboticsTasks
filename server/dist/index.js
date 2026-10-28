@@ -31,6 +31,11 @@ app.use('/api/users', userRoutes_js_1.userRouter);
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+// Servir pasta de imagens da raiz (/img)
+const imgDir = path_1.default.resolve(process.cwd(), 'img');
+if (fs_1.default.existsSync(imgDir)) {
+    app.use('/img', express_1.default.static(imgDir));
+}
 // Servir frontend compilado
 const possiblePublicDirs = [
     path_1.default.resolve(process.cwd(), 'client/dist'),
