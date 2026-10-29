@@ -14,5 +14,3 @@
     log {
         output file /data/caddy_access.log
     }
-}
-
