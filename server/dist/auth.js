@@ -12,7 +12,8 @@ function generateToken(user) {
     return jsonwebtoken_1.default.sign({ id: user.id, email: user.email, name: user.name, avatar_url: user.avatar_url }, config_js_1.config.jwtSecret, { expiresIn: '30d' });
 }
 function authMiddleware(req, res, next) {
-    const token = req.cookies?.tasks_token || req.headers.authorization?.replace(/^Bearer\s+/, '');
+    const queryToken = typeof req.query?.token === 'string' ? req.query.token : undefined;
+    const token = req.cookies?.tasks_token || req.headers.authorization?.replace(/^Bearer\s+/, '') || queryToken;
     if (!token) {
         return res.status(401).json({ error: 'Não autenticado' });
     }

@@ -11,6 +11,7 @@ import {
   addDelivery,
   deleteDelivery,
 } from '../db.js';
+import { notifyUsersOfTaskEvent } from '../notifications.js';
 
 export const taskRouter = Router();
 
@@ -51,15 +52,26 @@ taskRouter.post('/', (req: AuthenticatedRequest, res) => {
     created_by: req.user!.id,
   });
 
+  notifyUsersOfTaskEvent({
+    actor: req.user!,
+    task,
+    action: 'created',
+  });
+
   res.status(201).json({ task });
 });
 
 // Atualizar tarefa
-taskRouter.put('/:id', (req, res) => {
+taskRouter.put('/:id', (req: AuthenticatedRequest, res) => {
   const { title, description, status, due_date, assigned_to } = req.body;
 
   if (status && !['todo', 'doing', 'done'].includes(status)) {
     return res.status(400).json({ error: 'Status inválido. Use todo, doing ou done' });
+  }
+
+  const existingData = getTaskById(req.params.id);
+  if (!existingData) {
+    return res.status(404).json({ error: 'Tarefa não encontrada' });
   }
 
   const updated = updateTask(req.params.id, {
@@ -74,15 +86,32 @@ taskRouter.put('/:id', (req, res) => {
     return res.status(404).json({ error: 'Tarefa não encontrada' });
   }
 
+  notifyUsersOfTaskEvent({
+    actor: req.user!,
+    task: updated,
+    previousTask: existingData.task,
+    action: 'updated',
+  });
+
   res.json({ task: updated });
 });
 
 // Excluir tarefa
-taskRouter.delete('/:id', (req, res) => {
+taskRouter.delete('/:id', (req: AuthenticatedRequest, res) => {
+  const existingData = getTaskById(req.params.id);
   const success = deleteTask(req.params.id);
   if (!success) {
     return res.status(404).json({ error: 'Tarefa não encontrada' });
   }
+
+  if (existingData) {
+    notifyUsersOfTaskEvent({
+      actor: req.user!,
+      task: existingData.task,
+      action: 'deleted',
+    });
+  }
+
   res.json({ success: true, message: 'Tarefa excluída' });
 });
 
@@ -93,11 +122,21 @@ taskRouter.post('/:id/comments', (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ error: 'Conteúdo do comentário é obrigatório' });
   }
 
+  const existingData = getTaskById(req.params.id);
   const comment = addComment({
     task_id: req.params.id,
     user_id: req.user!.id,
     content: content.trim(),
   });
+
+  if (existingData) {
+    notifyUsersOfTaskEvent({
+      actor: req.user!,
+      task: existingData.task,
+      action: 'commented',
+      extraText: content.trim(),
+    });
+  }
 
   res.status(201).json({ comment });
 });
@@ -118,12 +157,22 @@ taskRouter.post('/:id/deliveries', (req: AuthenticatedRequest, res) => {
     return res.status(400).json({ error: 'Descrição do entregável é obrigatória' });
   }
 
+  const existingData = getTaskById(req.params.id);
   const delivery = addDelivery({
     task_id: req.params.id,
     user_id: req.user!.id,
     content: content.trim(),
     attachment_url: attachment_url ? attachment_url.trim() : null,
   });
+
+  if (existingData) {
+    notifyUsersOfTaskEvent({
+      actor: req.user!,
+      task: existingData.task,
+      action: 'delivered',
+      extraText: content.trim(),
+    });
+  }
 
   res.status(201).json({ delivery });
 });

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { User } from '../types';
 import { api } from '../api';
-import { X, Upload, Lock, Check, Download } from 'lucide-react';
+import { X, Upload, Lock, Check, Download, BellRing, BellOff } from 'lucide-react';
 
 interface ProfileModalProps {
   user: User;
@@ -30,6 +30,26 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
   const [password, setPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(Boolean(user.notifications_enabled));
+  const [isTogglingNotif, setIsTogglingNotif] = useState<boolean>(false);
+
+  const handleToggleNotifications = async () => {
+    setIsTogglingNotif(true);
+    try {
+      const nextState = !notifEnabled;
+      if (nextState && 'Notification' in window && Notification.permission === 'default') {
+        try {
+          await Notification.requestPermission();
+        } catch {}
+      }
+      const res = await api.updateNotificationPreferences(nextState);
+      setNotifEnabled(res.notificationsEnabled);
+      onUpdated(res.user);
+    } catch {
+    } finally {
+      setIsTogglingNotif(false);
+    }
+  };
 
   const currentPreview =
     uploadedDataUrl ||
@@ -197,6 +217,34 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpd
                 );
               })}
             </div>
+          </div>
+
+          {/* Preferência de Notificações Direcionadas */}
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#151520] border border-purple-500/20">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-[#0d0d14] border border-purple-500/30 flex items-center justify-center shrink-0 text-purple-300">
+                {notifEnabled ? <BellRing className="w-4 h-4" /> : <BellOff className="w-4 h-4 text-zinc-500" />}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-white truncate">Notificações</div>
+                <div className="text-[10px] text-zinc-400 truncate">
+                  {notifEnabled ? `Ativadas para ${user.name}` : 'Desativadas'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={isTogglingNotif}
+              onClick={handleToggleNotifications}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all shrink-0 active:scale-95 ${
+                notifEnabled
+                  ? 'bg-purple-600/20 border border-purple-500/40 text-purple-200 hover:bg-purple-600/30'
+                  : 'bg-zinc-900 border border-white/[0.08] text-zinc-400 hover:text-white'
+              }`}
+            >
+              <span>{notifEnabled ? 'Ativo' : 'Ativar'}</span>
+            </button>
           </div>
 
           {/* Instalar PWA (SPSKILLS TASKS) */}

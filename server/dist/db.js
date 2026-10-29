@@ -18,6 +18,13 @@ exports.addDelivery = addDelivery;
 exports.deleteDelivery = deleteDelivery;
 exports.addComment = addComment;
 exports.deleteComment = deleteComment;
+exports.setUserNotificationPreference = setUserNotificationPreference;
+exports.getUsersWithNotificationsEnabled = getUsersWithNotificationsEnabled;
+exports.createNotification = createNotification;
+exports.listUserNotifications = listUserNotifications;
+exports.markNotificationRead = markNotificationRead;
+exports.markAllNotificationsRead = markAllNotificationsRead;
+exports.clearUserNotifications = clearUserNotifications;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const node_sqlite_1 = require("node:sqlite");
@@ -29,7 +36,8 @@ let memoryStore = {
     users: [],
     tasks: [],
     deliveries: [],
-    comments: []
+    comments: [],
+    notifications: []
 };
 function saveJsonStore() {
     if (useJsonFallback) {
@@ -55,7 +63,24 @@ function initDatabase() {
         email TEXT UNIQUE NOT NULL,
         name TEXT NOT NULL,
         avatar_url TEXT,
+        notifications_enabled INTEGER DEFAULT 0,
+        notifications_prompted INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        recipient_user_id TEXT NOT NULL,
+        actor_user_id TEXT NOT NULL,
+        actor_name TEXT NOT NULL,
+        actor_avatar TEXT,
+        task_id TEXT,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        is_read INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (recipient_user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
       CREATE TABLE IF NOT EXISTS tasks (
@@ -97,7 +122,17 @@ function initDatabase() {
       CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
       CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
+      CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_user_id, is_read);
     `);
+        // Migração segura caso a tabela users já exista sem as colunas de notificação
+        try {
+            sqliteDb.exec(`ALTER TABLE users ADD COLUMN notifications_enabled INTEGER DEFAULT 0;`);
+        }
+        catch { }
+        try {
+            sqliteDb.exec(`ALTER TABLE users ADD COLUMN notifications_prompted INTEGER DEFAULT 0;`);
+        }
+        catch { }
         // Limpar tarefas genéricas de exemplo e usuários extras antigos
         sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
         sqliteDb.prepare(`DELETE FROM users WHERE id NOT IN ('user_carlos', 'user_nicolle', 'user_kurachi', 'user_admin')`).run();
@@ -462,4 +497,117 @@ function deleteComment(id) {
     memoryStore.comments = memoryStore.comments.filter(c => c.id !== id);
     saveJsonStore();
     return memoryStore.comments.length < len;
+}
+// ==========================================
+// Preferências e Queries de Notificações
+// ==========================================
+function setUserNotificationPreference(userId, enabled) {
+    const val = enabled ? 1 : 0;
+    if (!useJsonFallback && sqliteDb) {
+        sqliteDb.prepare('UPDATE users SET notifications_enabled = ?, notifications_prompted = 1 WHERE id = ?').run(val, userId);
+        return findUserById(userId);
+    }
+    const idx = memoryStore.users.findIndex(u => u.id === userId);
+    if (idx < 0)
+        return null;
+    memoryStore.users[idx].notifications_enabled = val;
+    memoryStore.users[idx].notifications_prompted = 1;
+    saveJsonStore();
+    return memoryStore.users[idx];
+}
+function getUsersWithNotificationsEnabled(excludeUserId) {
+    if (!useJsonFallback && sqliteDb) {
+        return sqliteDb.prepare(`
+      SELECT * FROM users
+      WHERE notifications_enabled = 1 AND id != ?
+    `).all(excludeUserId);
+    }
+    return memoryStore.users.filter(u => u.notifications_enabled === 1 && u.id !== excludeUserId);
+}
+function createNotification(notif) {
+    const id = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const now = new Date().toISOString();
+    const newNotif = {
+        id,
+        recipient_user_id: notif.recipient_user_id,
+        actor_user_id: notif.actor_user_id,
+        actor_name: notif.actor_name,
+        actor_avatar: notif.actor_avatar || null,
+        task_id: notif.task_id || null,
+        type: notif.type,
+        title: notif.title,
+        message: notif.message,
+        is_read: 0,
+        created_at: now,
+    };
+    if (!useJsonFallback && sqliteDb) {
+        sqliteDb.prepare(`
+      INSERT INTO notifications (
+        id, recipient_user_id, actor_user_id, actor_name, actor_avatar,
+        task_id, type, title, message, is_read, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+    `).run(newNotif.id, newNotif.recipient_user_id, newNotif.actor_user_id, newNotif.actor_name, newNotif.actor_avatar, newNotif.task_id, newNotif.type, newNotif.title, newNotif.message, newNotif.created_at);
+        return newNotif;
+    }
+    if (!memoryStore.notifications) {
+        memoryStore.notifications = [];
+    }
+    memoryStore.notifications.unshift(newNotif);
+    saveJsonStore();
+    return newNotif;
+}
+function listUserNotifications(userId, limit = 40) {
+    if (!useJsonFallback && sqliteDb) {
+        return sqliteDb.prepare(`
+      SELECT * FROM notifications
+      WHERE recipient_user_id = ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(userId, limit);
+    }
+    return (memoryStore.notifications || [])
+        .filter(n => n.recipient_user_id === userId)
+        .slice(0, limit);
+}
+function markNotificationRead(id, userId) {
+    if (!useJsonFallback && sqliteDb) {
+        const info = sqliteDb.prepare(`
+      UPDATE notifications SET is_read = 1
+      WHERE id = ? AND recipient_user_id = ?
+    `).run(id, userId);
+        return Number(info.changes) > 0;
+    }
+    const n = (memoryStore.notifications || []).find(item => item.id === id && item.recipient_user_id === userId);
+    if (!n)
+        return false;
+    n.is_read = 1;
+    saveJsonStore();
+    return true;
+}
+function markAllNotificationsRead(userId) {
+    if (!useJsonFallback && sqliteDb) {
+        const info = sqliteDb.prepare(`
+      UPDATE notifications SET is_read = 1
+      WHERE recipient_user_id = ? AND is_read = 0
+    `).run(userId);
+        return Number(info.changes) > 0;
+    }
+    (memoryStore.notifications || []).forEach(item => {
+        if (item.recipient_user_id === userId)
+            item.is_read = 1;
+    });
+    saveJsonStore();
+    return true;
+}
+function clearUserNotifications(userId) {
+    if (!useJsonFallback && sqliteDb) {
+        const info = sqliteDb.prepare(`
+      DELETE FROM notifications WHERE recipient_user_id = ?
+    `).run(userId);
+        return Number(info.changes) > 0;
+    }
+    memoryStore.notifications = (memoryStore.notifications || []).filter(n => n.recipient_user_id !== userId);
+    saveJsonStore();
+    return true;
 }

@@ -5,7 +5,23 @@ export interface User {
   email: string;
   name: string;
   avatar_url?: string;
+  notifications_enabled?: number;
+  notifications_prompted?: number;
   created_at?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  recipient_user_id: string;
+  actor_user_id: string;
+  actor_name: string;
+  actor_avatar?: string | null;
+  task_id?: string | null;
+  type: 'task_created' | 'task_updated' | 'task_status' | 'task_assigned' | 'task_deleted' | 'task_comment' | 'task_delivery';
+  title: string;
+  message: string;
+  is_read: number;
+  created_at: string;
 }
 
 export interface Comment {

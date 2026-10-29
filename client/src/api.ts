@@ -1,4 +1,4 @@
-import { Task, User, Comment, Delivery } from './types';
+import { Task, User, Comment, Delivery, AppNotification } from './types';
 
 const API_BASE = '/api';
 
@@ -75,6 +75,36 @@ export const api = {
     }),
   deleteDelivery: (deliveryId: string) =>
     request<{ success: boolean }>(`/tasks/deliveries/${deliveryId}`, {
+      method: 'DELETE',
+    }),
+
+  // Notificações
+  getNotifications: () =>
+    request<{
+      notifications: AppNotification[];
+      unreadCount: number;
+      notificationsEnabled: boolean;
+      notificationsPrompted: boolean;
+    }>('/notifications'),
+  updateNotificationPreferences: (enabled: boolean) =>
+    request<{
+      user: User;
+      notificationsEnabled: boolean;
+      notificationsPrompted: boolean;
+    }>('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify({ enabled }),
+    }),
+  markNotificationRead: (id: string) =>
+    request<{ success: boolean }>(`/notifications/${id}/read`, {
+      method: 'PUT',
+    }),
+  markAllNotificationsRead: () =>
+    request<{ success: boolean }>('/notifications/read-all', {
+      method: 'PUT',
+    }),
+  clearNotifications: () =>
+    request<{ success: boolean }>('/notifications', {
       method: 'DELETE',
     }),
 };

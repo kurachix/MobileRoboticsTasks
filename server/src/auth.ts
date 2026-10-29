@@ -16,7 +16,8 @@ export function generateToken(user: User): string {
 }
 
 export function authMiddleware(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const token = req.cookies?.tasks_token || req.headers.authorization?.replace(/^Bearer\s+/, '');
+  const queryToken = typeof req.query?.token === 'string' ? req.query.token : undefined;
+  const token = req.cookies?.tasks_token || req.headers.authorization?.replace(/^Bearer\s+/, '') || queryToken;
 
   if (!token) {
     return res.status(401).json({ error: 'Não autenticado' });

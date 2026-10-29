@@ -1,6 +1,6 @@
 import React from 'react';
 import { User } from '../types';
-import { LogOut, Settings, LayoutGrid, PlusCircle } from 'lucide-react';
+import { LogOut, Settings, LayoutGrid, PlusCircle, Bell, BellOff } from 'lucide-react';
 
 export type ActiveTab = 'create' | 'board';
 
@@ -8,7 +8,10 @@ interface HeaderProps {
   user: User;
   activeTab: ActiveTab;
   taskCount: number;
+  unreadNotifications: number;
+  notificationsEnabled: boolean;
   onChangeTab: (tab: ActiveTab) => void;
+  onOpenNotifications: () => void;
   onOpenProfile: () => void;
   onLogout: () => void;
 }
@@ -17,7 +20,10 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   activeTab,
   taskCount,
+  unreadNotifications,
+  notificationsEnabled,
   onChangeTab,
+  onOpenNotifications,
   onOpenProfile,
   onLogout,
 }) => {
@@ -74,8 +80,33 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </nav>
 
-          {/* Profile & Logout */}
+          {/* Notifications, Profile & Logout */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              title={notificationsEnabled ? 'Notificações ativadas' : 'Notificações desativadas'}
+              className={`relative p-2 rounded-xl border transition-all duration-200 cursor-pointer ${
+                unreadNotifications > 0
+                  ? 'bg-purple-700/25 border-purple-500/50 text-purple-200 shadow-[0_0_16px_rgba(109,40,217,0.35)]'
+                  : notificationsEnabled
+                  ? 'bg-[#11111a] hover:bg-purple-500/15 border-purple-500/25 text-zinc-200'
+                  : 'bg-[#11111a] hover:bg-white/[0.05] border-zinc-800 text-zinc-500'
+              }`}
+            >
+              {notificationsEnabled ? (
+                <Bell className="w-4 h-4" />
+              ) : (
+                <BellOff className="w-4 h-4" />
+              )}
+
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-purple-600 text-[10px] font-bold text-white flex items-center justify-center shadow-[0_0_8px_rgba(147,51,234,0.9)]">
+                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                </span>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={onOpenProfile}

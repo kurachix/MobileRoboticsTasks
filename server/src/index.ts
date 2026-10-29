@@ -8,6 +8,7 @@ import { initDatabase } from './db.js';
 import { authRouter } from './routes/authRoutes.js';
 import { taskRouter } from './routes/taskRoutes.js';
 import { userRouter } from './routes/userRoutes.js';
+import { notificationRouter } from './routes/notificationRoutes.js';
 
 const app = express();
 
@@ -16,7 +17,7 @@ initDatabase();
 
 // Middlewares essenciais
 app.use(cors({
-  origin: config.isProduction ? true : [config.clientUrl, 'http://localhost:5173', 'http://localhost:3000'],
+  origin: true,
   credentials: true,
 }));
 app.use(cookieParser());
@@ -33,6 +34,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', taskRouter);
 app.use('/api/users', userRouter);
+app.use('/api/notifications', notificationRouter);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {

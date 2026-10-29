@@ -13,12 +13,13 @@ const db_js_1 = require("./db.js");
 const authRoutes_js_1 = require("./routes/authRoutes.js");
 const taskRoutes_js_1 = require("./routes/taskRoutes.js");
 const userRoutes_js_1 = require("./routes/userRoutes.js");
+const notificationRoutes_js_1 = require("./routes/notificationRoutes.js");
 const app = (0, express_1.default)();
 // Inicializar banco de dados SQLite
 (0, db_js_1.initDatabase)();
 // Middlewares essenciais
 app.use((0, cors_1.default)({
-    origin: config_js_1.config.isProduction ? true : [config_js_1.config.clientUrl, 'http://localhost:5173', 'http://localhost:3000'],
+    origin: true,
     credentials: true,
 }));
 app.use((0, cookie_parser_1.default)());
@@ -33,6 +34,7 @@ app.use('/uploads', express_1.default.static(uploadsDir));
 app.use('/api/auth', authRoutes_js_1.authRouter);
 app.use('/api/tasks', taskRoutes_js_1.taskRouter);
 app.use('/api/users', userRoutes_js_1.userRouter);
+app.use('/api/notifications', notificationRoutes_js_1.notificationRouter);
 // Healthcheck
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

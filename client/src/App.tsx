@@ -8,6 +8,7 @@ import { CreateTaskView } from './components/CreateTaskView';
 import { TaskModal } from './components/TaskModal';
 import { ProfileModal } from './components/ProfileModal';
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
+import { NotificationCenter } from './components/NotificationCenter';
 
 export const App: React.FC = () => {
   // Estado de Autenticação
@@ -23,9 +24,12 @@ export const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isTasksLoading, setIsTasksLoading] = useState<boolean>(false);
 
-  // Estado dos Modais
+  // Estado dos Modais e Notificações
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   // Verificar sessão existente
@@ -163,7 +167,10 @@ export const App: React.FC = () => {
         user={user}
         activeTab={activeTab}
         taskCount={tasks.length}
+        unreadNotifications={unreadNotifications}
+        notificationsEnabled={notificationsEnabled}
         onChangeTab={setActiveTab}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         onLogout={handleLogout}
       />
@@ -190,31 +197,56 @@ export const App: React.FC = () => {
         )}
       </main>
 
-        {/* Modal de Detalhes / Edição da Tarefa */}
-        {isModalOpen && (
-          <TaskModal
-            task={selectedTask}
-            users={users}
-            onClose={() => setIsModalOpen(false)}
-            onSave={handleTaskSaved}
-            onDelete={handleTaskDeleted}
-          />
-        )}
+      {/* Modal de Detalhes / Edição da Tarefa */}
+      {isModalOpen && (
+        <TaskModal
+          task={selectedTask}
+          users={users}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleTaskSaved}
+          onDelete={handleTaskDeleted}
+        />
+      )}
 
-        {/* Modal de Configuração de Perfil */}
-        {isProfileOpen && (
-          <ProfileModal
-            user={user}
-            onClose={() => setIsProfileOpen(false)}
-            onUpdated={updatedUser => {
-              setUser(updatedUser);
-              loadWorkspaceData();
-            }}
-          />
-        )}
+      {/* Modal de Configuração de Perfil */}
+      {isProfileOpen && (
+        <ProfileModal
+          user={user}
+          onClose={() => setIsProfileOpen(false)}
+          onUpdated={updatedUser => {
+            setUser(updatedUser);
+            setNotificationsEnabled(Boolean(updatedUser.notifications_enabled));
+            loadWorkspaceData();
+          }}
+        />
+      )}
 
-        {/* Prompt de Instalação do PWA em dispositivos Mobile */}
-        <PwaInstallPrompt />
-      </div>
+      {/* Central de Notificações e Pedido Pós-Login (100% Direcionado ao Usuário) */}
+      <NotificationCenter
+        user={user}
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+        onUnreadCountChange={setUnreadNotifications}
+        onNotificationsEnabledChange={(enabled, updatedUser) => {
+          setNotificationsEnabled(enabled);
+          if (updatedUser) {
+            setUser(updatedUser);
+          }
+        }}
+        onTaskActivity={loadWorkspaceData}
+        onOpenTaskById={taskId => {
+          const found = tasks.find(t => t.id === taskId);
+          if (found) {
+            setActiveTab('board');
+            handleOpenEditTask(found);
+          } else {
+            loadWorkspaceData();
+          }
+        }}
+      />
+
+      {/* Prompt de Instalação do PWA em dispositivos Mobile */}
+      <PwaInstallPrompt />
+    </div>
   );
 };
