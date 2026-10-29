@@ -100,7 +100,6 @@ export const PwaInstallPrompt: React.FC = () => {
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
       const promptEvent = e as BeforeInstallPromptEvent;
       window.__deferredPwaPrompt = promptEvent;
       setDeferredPrompt(promptEvent);

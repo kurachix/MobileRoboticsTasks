@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "/spskills-tasks-app",
   "name": "SPSKILLS TASKS",
   "short_name": "SPSKILLS TASKS",
   "description": "Gerenciamento de Tarefas SPSKILLS",
@@ -63,3 +63,4 @@
     }
   ]
 }
+
