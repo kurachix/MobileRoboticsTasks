@@ -197,56 +197,56 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modal de Detalhes / Edição da Tarefa */}
-      {isModalOpen && (
-        <TaskModal
-          task={selectedTask}
-          users={users}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handleTaskSaved}
-          onDelete={handleTaskDeleted}
-        />
-      )}
+        {/* Modal de Detalhes / Edição da Tarefa */}
+        {isModalOpen && (
+          <TaskModal
+            task={selectedTask}
+            users={users}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleTaskSaved}
+            onDelete={handleTaskDeleted}
+          />
+        )}
 
-      {/* Modal de Configuração de Perfil */}
-      {isProfileOpen && (
-        <ProfileModal
+        {/* Modal de Configuração de Perfil */}
+        {isProfileOpen && (
+          <ProfileModal
+            user={user}
+            onClose={() => setIsProfileOpen(false)}
+            onUpdated={updatedUser => {
+              setUser(updatedUser);
+              setNotificationsEnabled(Boolean(updatedUser.notifications_enabled));
+              loadWorkspaceData();
+            }}
+          />
+        )}
+
+        {/* Central de Notificações e Pedido Pós-Login (100% Direcionado ao Usuário) */}
+        <NotificationCenter
           user={user}
-          onClose={() => setIsProfileOpen(false)}
-          onUpdated={updatedUser => {
-            setUser(updatedUser);
-            setNotificationsEnabled(Boolean(updatedUser.notifications_enabled));
-            loadWorkspaceData();
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+          onUnreadCountChange={setUnreadNotifications}
+          onNotificationsEnabledChange={(enabled, updatedUser) => {
+            setNotificationsEnabled(enabled);
+            if (updatedUser) {
+              setUser(updatedUser);
+            }
+          }}
+          onTaskActivity={loadWorkspaceData}
+          onOpenTaskById={taskId => {
+            const found = tasks.find(t => t.id === taskId);
+            if (found) {
+              setActiveTab('board');
+              handleOpenEditTask(found);
+            } else {
+              loadWorkspaceData();
+            }
           }}
         />
-      )}
 
-      {/* Central de Notificações e Pedido Pós-Login (100% Direcionado ao Usuário) */}
-      <NotificationCenter
-        user={user}
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        onUnreadCountChange={setUnreadNotifications}
-        onNotificationsEnabledChange={(enabled, updatedUser) => {
-          setNotificationsEnabled(enabled);
-          if (updatedUser) {
-            setUser(updatedUser);
-          }
-        }}
-        onTaskActivity={loadWorkspaceData}
-        onOpenTaskById={taskId => {
-          const found = tasks.find(t => t.id === taskId);
-          if (found) {
-            setActiveTab('board');
-            handleOpenEditTask(found);
-          } else {
-            loadWorkspaceData();
-          }
-        }}
-      />
-
-      {/* Prompt de Instalação do PWA em dispositivos Mobile */}
-      <PwaInstallPrompt />
-    </div>
+        {/* Prompt de Instalação do PWA em dispositivos Mobile */}
+        <PwaInstallPrompt />
+      </div>
   );
 };

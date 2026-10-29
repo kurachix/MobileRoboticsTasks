@@ -178,10 +178,10 @@ export function initDatabase() {
     // Migração segura caso a tabela users já exista sem as colunas de notificação
     try {
       sqliteDb.exec(`ALTER TABLE users ADD COLUMN notifications_enabled INTEGER DEFAULT 0;`);
-    } catch { }
+    } catch {}
     try {
       sqliteDb.exec(`ALTER TABLE users ADD COLUMN notifications_prompted INTEGER DEFAULT 0;`);
-    } catch { }
+    } catch {}
 
     // Limpar tarefas genéricas de exemplo e usuários extras antigos
     sqliteDb.prepare(`DELETE FROM tasks WHERE id IN ('1', '2', '3') AND created_by = 'demo_user_1'`).run();
