@@ -1,4 +1,4 @@
-import { Task, User, Comment, Delivery, AppNotification } from './types';
+import { Task, User, Comment, Delivery, AppNotification, CalendarEvent } from './types';
 
 const API_BASE = '/api';
 
@@ -105,6 +105,24 @@ export const api = {
     }),
   clearNotifications: () =>
     request<{ success: boolean }>('/notifications', {
+      method: 'DELETE',
+    }),
+
+  // Calendário (Datas marcadas)
+  getCalendarEvents: () => request<{ events: CalendarEvent[] }>('/calendar'),
+  createCalendarEvent: (data: {
+    title: string;
+    description?: string;
+    event_date: string;
+    event_time?: string | null;
+    color?: string;
+  }) =>
+    request<{ event: CalendarEvent }>('/calendar', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteCalendarEvent: (id: string) =>
+    request<{ success: boolean }>(`/calendar/${id}`, {
       method: 'DELETE',
     }),
 };

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spskills-tasks-pwa-v4';
+const CACHE_NAME = 'spskills-tasks-pwa-v5';
 const STATIC_ASSETS = [
   '/',
   '/?source=pwa',

@@ -25,6 +25,10 @@ exports.listUserNotifications = listUserNotifications;
 exports.markNotificationRead = markNotificationRead;
 exports.markAllNotificationsRead = markAllNotificationsRead;
 exports.clearUserNotifications = clearUserNotifications;
+exports.listCalendarEvents = listCalendarEvents;
+exports.getCalendarEventById = getCalendarEventById;
+exports.createCalendarEvent = createCalendarEvent;
+exports.deleteCalendarEvent = deleteCalendarEvent;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const node_sqlite_1 = require("node:sqlite");
@@ -37,7 +41,8 @@ let memoryStore = {
     tasks: [],
     deliveries: [],
     comments: [],
-    notifications: []
+    notifications: [],
+    calendar_events: []
 };
 function saveJsonStore() {
     if (useJsonFallback) {
@@ -118,11 +123,24 @@ function initDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
+      CREATE TABLE IF NOT EXISTS calendar_events (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        event_date TEXT NOT NULL,
+        event_time TEXT,
+        color TEXT DEFAULT 'purple',
+        created_by TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+      );
+
       CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
       CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
       CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
       CREATE INDEX IF NOT EXISTS idx_deliveries_task_id ON deliveries(task_id);
       CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_user_id, is_read);
+      CREATE INDEX IF NOT EXISTS idx_calendar_events_date ON calendar_events(event_date);
     `);
         // Migração segura caso a tabela users já exista sem as colunas de notificação
         try {
@@ -610,4 +628,87 @@ function clearUserNotifications(userId) {
     memoryStore.notifications = (memoryStore.notifications || []).filter(n => n.recipient_user_id !== userId);
     saveJsonStore();
     return true;
+}
+// ==========================================
+// Queries de Eventos de Calendário (Datas Marcadas)
+// ==========================================
+function listCalendarEvents() {
+    if (!useJsonFallback && sqliteDb) {
+        return sqliteDb.prepare(`
+      SELECT
+        e.*,
+        u.name as creator_name,
+        u.avatar_url as creator_avatar
+      FROM calendar_events e
+      LEFT JOIN users u ON e.created_by = u.id
+      ORDER BY e.event_date ASC, e.event_time ASC, e.created_at ASC
+    `).all();
+    }
+    return (memoryStore.calendar_events || []).map(e => {
+        const creator = memoryStore.users.find(u => u.id === e.created_by);
+        return {
+            ...e,
+            creator_name: creator?.name || null,
+            creator_avatar: creator?.avatar_url || null,
+        };
+    });
+}
+function getCalendarEventById(id) {
+    if (!useJsonFallback && sqliteDb) {
+        return (sqliteDb.prepare(`
+        SELECT
+          e.*,
+          u.name as creator_name,
+          u.avatar_url as creator_avatar
+        FROM calendar_events e
+        LEFT JOIN users u ON e.created_by = u.id
+        WHERE e.id = ?
+      `).get(id) || null);
+    }
+    const found = (memoryStore.calendar_events || []).find(e => e.id === id);
+    if (!found)
+        return null;
+    const creator = memoryStore.users.find(u => u.id === found.created_by);
+    return {
+        ...found,
+        creator_name: creator?.name || null,
+        creator_avatar: creator?.avatar_url || null,
+    };
+}
+function createCalendarEvent(evt) {
+    const id = `cal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const now = new Date().toISOString();
+    const newEvent = {
+        id,
+        title: evt.title,
+        description: evt.description || '',
+        event_date: evt.event_date,
+        event_time: evt.event_time || null,
+        color: evt.color || 'purple',
+        created_by: evt.created_by,
+        created_at: now,
+    };
+    if (!useJsonFallback && sqliteDb) {
+        sqliteDb.prepare(`
+      INSERT INTO calendar_events (id, title, description, event_date, event_time, color, created_by, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(newEvent.id, newEvent.title, newEvent.description, newEvent.event_date, newEvent.event_time, newEvent.color, newEvent.created_by, newEvent.created_at);
+        return getCalendarEventById(id);
+    }
+    if (!memoryStore.calendar_events) {
+        memoryStore.calendar_events = [];
+    }
+    memoryStore.calendar_events.push(newEvent);
+    saveJsonStore();
+    return getCalendarEventById(id);
+}
+function deleteCalendarEvent(id) {
+    if (!useJsonFallback && sqliteDb) {
+        const info = sqliteDb.prepare('DELETE FROM calendar_events WHERE id = ?').run(id);
+        return Number(info.changes) > 0;
+    }
+    const len = (memoryStore.calendar_events || []).length;
+    memoryStore.calendar_events = (memoryStore.calendar_events || []).filter(e => e.id !== id);
+    saveJsonStore();
+    return memoryStore.calendar_events.length < len;
 }

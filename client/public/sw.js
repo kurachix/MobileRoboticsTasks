@@ -1,4 +1,4 @@
-const CACHE_NAME = 'spskills-tasks-pwa-v4';
+const CACHE_NAME = 'spskills-tasks-pwa-v5';
 const STATIC_ASSETS = [
   '/',
   '/?source=pwa',
@@ -21,7 +21,7 @@ self.addEventListener('install', event => {
       for (const asset of STATIC_ASSETS) {
         try {
           await cache.add(asset);
-        } catch (e) {}
+        } catch (e) { }
       }
     })
   );

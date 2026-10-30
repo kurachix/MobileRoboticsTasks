@@ -63,3 +63,16 @@ export interface Task {
   delivery_count?: number;
 }
 
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string;
+  event_date: string; // YYYY-MM-DD
+  event_time?: string | null;
+  color: 'purple' | 'violet' | 'emerald' | 'amber' | 'rose';
+  created_by: string;
+  creator_name?: string | null;
+  creator_avatar?: string | null;
+  created_at?: string;
+}
+

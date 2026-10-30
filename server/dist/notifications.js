@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerSseClient = registerSseClient;
 exports.removeSseClient = removeSseClient;
 exports.notifyUsersOfTaskEvent = notifyUsersOfTaskEvent;
+exports.notifyUsersOfCalendarEvent = notifyUsersOfCalendarEvent;
 const db_js_1 = require("./db.js");
 // Conexões SSE ativas mapeadas por ID de usuário (recipient_user_id)
 const sseClients = new Map();
@@ -145,6 +146,33 @@ function notifyUsersOfTaskEvent(params) {
             type,
             title,
             message,
+        });
+        pushToUser(recipient.id, saved);
+    }
+}
+function notifyUsersOfCalendarEvent(params) {
+    const { actor, title, eventDate, eventTime, action } = params;
+    const recipients = (0, db_js_1.getUsersWithNotificationsEnabled)(actor.id);
+    if (recipients.length === 0)
+        return;
+    const formattedDate = eventDate.split('-').reverse().join('/');
+    const timeInfo = eventTime ? ` às ${eventTime}` : '';
+    for (const recipient of recipients) {
+        const notifTitle = action === 'created'
+            ? `${recipient.name}: Nova data no calendário`
+            : `${recipient.name}: Data removida do calendário`;
+        const notifMessage = action === 'created'
+            ? `${actor.name} marcou "${title}" em ${formattedDate}${timeInfo}.`
+            : `${actor.name} removeu "${title}" (${formattedDate}) do calendário.`;
+        const saved = (0, db_js_1.createNotification)({
+            recipient_user_id: recipient.id,
+            actor_user_id: actor.id,
+            actor_name: actor.name,
+            actor_avatar: actor.avatar_url || null,
+            task_id: null,
+            type: action === 'created' ? 'task_created' : 'task_deleted',
+            title: notifTitle,
+            message: notifMessage,
         });
         pushToUser(recipient.id, saved);
     }

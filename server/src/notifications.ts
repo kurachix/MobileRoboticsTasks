@@ -159,3 +159,42 @@ export function notifyUsersOfTaskEvent(params: NotifyEventParams) {
   }
 }
 
+export function notifyUsersOfCalendarEvent(params: {
+  actor: User;
+  title: string;
+  eventDate: string;
+  eventTime?: string | null;
+  action: 'created' | 'deleted';
+}) {
+  const { actor, title, eventDate, eventTime, action } = params;
+  const recipients = getUsersWithNotificationsEnabled(actor.id);
+  if (recipients.length === 0) return;
+
+  const formattedDate = eventDate.split('-').reverse().join('/');
+  const timeInfo = eventTime ? ` às ${eventTime}` : '';
+
+  for (const recipient of recipients) {
+    const notifTitle =
+      action === 'created'
+        ? `${recipient.name}: Nova data no calendário`
+        : `${recipient.name}: Data removida do calendário`;
+    const notifMessage =
+      action === 'created'
+        ? `${actor.name} marcou "${title}" em ${formattedDate}${timeInfo}.`
+        : `${actor.name} removeu "${title}" (${formattedDate}) do calendário.`;
+
+    const saved = createNotification({
+      recipient_user_id: recipient.id,
+      actor_user_id: actor.id,
+      actor_name: actor.name,
+      actor_avatar: actor.avatar_url || null,
+      task_id: null,
+      type: action === 'created' ? 'task_created' : 'task_deleted',
+      title: notifTitle,
+      message: notifMessage,
+    });
+
+    pushToUser(recipient.id, saved);
+  }
+}
+

@@ -10,6 +10,7 @@ import { authRouter } from './routes/authRoutes.js';
 import { taskRouter } from './routes/taskRoutes.js';
 import { userRouter } from './routes/userRoutes.js';
 import { notificationRouter } from './routes/notificationRoutes.js';
+import { calendarRouter } from './routes/calendarRoutes.js';
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/tasks', taskRouter);
 app.use('/api/users', userRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/calendar', calendarRouter);
 
 // Healthcheck & info de túnel HTTPS para PWA
 app.get('/api/health', (req, res) => {

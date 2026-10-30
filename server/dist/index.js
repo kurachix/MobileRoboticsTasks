@@ -15,6 +15,7 @@ const authRoutes_js_1 = require("./routes/authRoutes.js");
 const taskRoutes_js_1 = require("./routes/taskRoutes.js");
 const userRoutes_js_1 = require("./routes/userRoutes.js");
 const notificationRoutes_js_1 = require("./routes/notificationRoutes.js");
+const calendarRoutes_js_1 = require("./routes/calendarRoutes.js");
 const app = (0, express_1.default)();
 // Inicializar banco de dados SQLite
 (0, db_js_1.initDatabase)();
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes_js_1.authRouter);
 app.use('/api/tasks', taskRoutes_js_1.taskRouter);
 app.use('/api/users', userRoutes_js_1.userRouter);
 app.use('/api/notifications', notificationRoutes_js_1.notificationRouter);
+app.use('/api/calendar', calendarRoutes_js_1.calendarRouter);
 // Healthcheck & info de túnel HTTPS para PWA
 app.get('/api/health', (req, res) => {
     let httpsUrl = process.env.HTTPS_URL || null;

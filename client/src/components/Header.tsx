@@ -1,8 +1,8 @@
 import React from 'react';
 import { User } from '../types';
-import { LogOut, Settings, LayoutGrid, PlusCircle, Bell, BellOff } from 'lucide-react';
+import { LogOut, Settings, LayoutGrid, PlusCircle, Bell, BellOff, Calendar } from 'lucide-react';
 
-export type ActiveTab = 'create' | 'board';
+export type ActiveTab = 'create' | 'board' | 'calendar';
 
 interface HeaderProps {
   user: User;
@@ -78,6 +78,19 @@ export const Header: React.FC<HeaderProps> = ({
                 {taskCount}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeTab('calendar')}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                activeTab === 'calendar'
+                  ? 'bg-purple-700/80 text-white border border-purple-500/40 shadow-[0_0_18px_rgba(88,28,135,0.5)]'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Calendário</span>
+            </button>
           </nav>
 
           {/* Notifications, Profile & Logout */}
@@ -136,34 +149,34 @@ export const Header: React.FC<HeaderProps> = ({
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#08080e]/95 backdrop-blur-2xl border-t border-purple-500/20 px-3 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-        <div className="grid grid-cols-2 gap-2 max-w-md mx-auto">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#08080e]/95 backdrop-blur-2xl border-t border-purple-500/20 px-2.5 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-3 gap-1.5 max-w-md mx-auto">
           <button
             type="button"
             onClick={() => onChangeTab('create')}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[11px] font-semibold transition-all duration-200 ${
               activeTab === 'create'
                 ? 'bg-purple-700/80 text-white border border-purple-500/40 shadow-[0_0_18px_rgba(88,28,135,0.5)]'
                 : 'bg-[#11111a] text-zinc-400 border border-white/[0.05]'
             }`}
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Nova Tarefa</span>
+            <PlusCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Nova</span>
           </button>
 
           <button
             type="button"
             onClick={() => onChangeTab('board')}
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[11px] font-semibold transition-all duration-200 ${
               activeTab === 'board'
                 ? 'bg-purple-700/80 text-white border border-purple-500/40 shadow-[0_0_18px_rgba(88,28,135,0.5)]'
                 : 'bg-[#11111a] text-zinc-400 border border-white/[0.05]'
             }`}
           >
-            <LayoutGrid className="w-4 h-4" />
-            <span>Kanban</span>
+            <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Kanban</span>
             <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${
                 activeTab === 'board'
                   ? 'bg-black/30 text-purple-100'
                   : 'bg-purple-500/15 text-purple-300'
@@ -171,6 +184,19 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {taskCount}
             </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onChangeTab('calendar')}
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl text-[11px] font-semibold transition-all duration-200 ${
+              activeTab === 'calendar'
+                ? 'bg-purple-700/80 text-white border border-purple-500/40 shadow-[0_0_18px_rgba(88,28,135,0.5)]'
+                : 'bg-[#11111a] text-zinc-400 border border-white/[0.05]'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Calendário</span>
           </button>
         </div>
       </nav>

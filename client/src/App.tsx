@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Task, TaskStatus } from './types';
+import { User, Task, TaskStatus, CalendarEvent } from './types';
 import { api } from './api';
 import { Header, ActiveTab } from './components/Header';
 import { LoginView } from './components/LoginView';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CreateTaskView } from './components/CreateTaskView';
+import { CalendarView } from './components/CalendarView';
 import { TaskModal } from './components/TaskModal';
 import { ProfileModal } from './components/ProfileModal';
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
@@ -19,8 +20,9 @@ export const App: React.FC = () => {
   // Estado das 2 Guias (Tela 1: Nova Tarefa -> Tela 2: Kanban)
   const [activeTab, setActiveTab] = useState<ActiveTab>('create');
 
-  // Estado do Kanban e Usuários
+  // Estado do Kanban, Calendário e Usuários
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isTasksLoading, setIsTasksLoading] = useState<boolean>(false);
 
@@ -49,17 +51,19 @@ export const App: React.FC = () => {
     initAuth();
   }, []);
 
-  // Carregar tarefas e usuários do sistema quando autenticado
+  // Carregar tarefas, eventos do calendário e usuários do sistema quando autenticado
   const loadWorkspaceData = useCallback(async () => {
     if (!user) return;
     setIsTasksLoading(true);
     try {
-      const [tasksRes, usersRes] = await Promise.all([
+      const [tasksRes, usersRes, calRes] = await Promise.all([
         api.getTasks(),
         api.getUsers(),
+        api.getCalendarEvents().catch(() => ({ events: [] })),
       ]);
       setTasks(tasksRes.tasks || []);
       setUsers(usersRes.users || []);
+      setCalendarEvents(calRes.events || []);
     } catch (err: any) {
       console.error('Erro ao carregar dados do workspace:', err);
     } finally {
@@ -185,6 +189,14 @@ export const App: React.FC = () => {
             tasks={tasks}
             onTaskClick={handleOpenEditTask}
             onMoveTask={handleMoveTask}
+          />
+        ) : activeTab === 'calendar' ? (
+          <CalendarView
+            tasks={tasks}
+            events={calendarEvents}
+            onTaskClick={handleOpenEditTask}
+            onEventCreated={newEvt => setCalendarEvents(prev => [...prev, newEvt])}
+            onEventDeleted={id => setCalendarEvents(prev => prev.filter(e => e.id !== id))}
           />
         ) : (
           <CreateTaskView
